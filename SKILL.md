@@ -471,6 +471,21 @@ See `references/example.md` for a complete worked example (input → processing 
 - Preserve exact timestamps and structure (SRT only)
 - Remember user-verified corrections during the session
 
+## 反模式与黑名单（Anti-Patterns）
+
+不要在增强过程中执行以下操作。每条来自真实使用中的常见错误。
+
+| 反模式 | 为什么不 | 正确做法 |
+|--------|---------|---------|
+| 将自然话语标记（说白了/也就是说/然后）误删 | 这些是中文口语连接手段，删除后文本生硬不自然 | 保留 discourse markers，只删纯口癖（啊/嗯/呃） |
+| 将英文普通单词强制大写（import→Import, callback→Callback） | 编程关键字是固定小写的，强制大写会破坏语义 | 只对已知专名（GPU/AI/Python）大写，关键字保持原样 |
+| 将引擎/公司名加《》（Unreal Engine 5→《Unreal Engine 5》） | 书名号仅用于游戏/影视作品标题，工具/公司不加 | 区分语境：玩/打通→加《》，渲染/打开→不加 |
+| 对日语/韩语为主的内容应用中文字间距规则 | 日韩文有自己的间距规范，中文规则套用会破坏原生排版 | 仅在中文字 > 50% 的片段上应用 CJK 间距 |
+| 用纯正则做口癖去除而不考虑上下文 | 的语气词可能是有意义的（好吧表让步） | 结合语义判断，低置信度保留原样并标记 ❗ |
+| 对同一段字幕重复应用增强步骤 | 重复处理可能导致过度修正（如二次去标点破坏保护区域） | 严格按 Enhancement Order 顺序执行一次 |
+| 输出前不做完整性校验 | 增强过程可能意外删除内容或破坏时间轴 | 必须执行 Quality Checks 中的全部校验项 |
+| 静默跳过联网校准而不通知用户 | 用户期待所有修正有据可查，跳过不通知会降低信任 | 跳过时在 diff 中标注「⚠️联网校准跳过」 |
+
 ## Failure Handling
 
 Each workflow step has an explicit failure branch. Follow this table when any step does not produce the expected result.
