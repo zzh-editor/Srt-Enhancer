@@ -70,6 +70,7 @@ The user uploads a file (`.srt` or `.txt`) directly via the dialog:
 - Default: **ON** (CJK-Latin spacing, code protection, number-unit compact, capitalization)
 - User can say `不需要空格` to disable, or adjust later with `中日文之间不加空格`
 - Typesetting is applied during step 7 (Mixed-Language Typesetting)
+🔴 **CHECKPOINT** — 等用户回答后再继续。未回答时不得默认进入处理流程。
 
 ### 2. Parse SRT File
 
@@ -358,6 +359,7 @@ After processing, present a review table before generating the final file:
 **User Review Workflow:**
 1. Present the diff table
 2. Ask: `以上修改是否全部确认？(y/n) 或输入编号单独确认/拒绝`
+🔴 **CHECKPOINT** — 必须等待用户输入。未确认不得进入输出生成。
 3. If user rejects specific items, revert those changes
 4. If user confirms, apply all changes and generate output
 5. Record user-verified corrections into the session's incremental terminology table
