@@ -1,9 +1,0 @@
-[
-  {"id": 1, "prompt": "优化字幕", "files": ["evals/input_1.srt"], "expected": "触发后先问中西文混排规范，确认后全自动执行：去口癖→的/得/地→术语→混排空格→标点去除→游戏书名号→置信度评分+diff对比表"},
-  {"id": 2, "prompt": "增强字幕", "files": ["evals/input_2.srt"], "expected": "繁转简→去口癖→ASR校准→游戏书名号→混排空格→置信度+diff"},
-  {"id": 3, "prompt": "优化这个字幕", "files": ["evals/input_3.srt"], "expected": "去口癖→标点去除→书名号标记→置信度+diff"},
-  {"id": 4, "prompt": "增强这个字幕", "files": ["evals/input_4.srt"], "expected": "混排空格→保护区域→数字单位→专名大写→置信度+diff"},
-  {"id": 5, "prompt": "优化字幕", "files": ["evals/input_5.srt"], "expected": "全流程：去口癖→的/得/地→术语→ASR校准→混排→标点→书名号→diff"},
-  {"id": 6, "prompt": "优化字幕", "files": ["evals/input_6.srt"], "expected": "完整触发→问空格→确认→全12步自动执行→置信度+diff输出"},
-  {"id": 7, "prompt": "增强字幕", "files": ["evals/input_7.srt"], "expected": "触发→问空格→确认→联网校准术语名称→置信度+diff"}
-]
