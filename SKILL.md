@@ -78,6 +78,7 @@ Load and parse the input SRT file:
 - Extract timestamp (start → end)
 - Extract subtitle text
 - Preserve exact formatting and structure
+- 🔴 解析失败 → 查 Failure Handling 表「SRT 文件解析失败」
 
 ### 2.5. Auto Domain Detection
 
@@ -204,6 +205,7 @@ After terminology correction, perform web search verification for suspected ASR 
    - If multiple plausible spellings exist → flag for user review (confidence: medium)
    - If search confirms the current spelling is correct → skip correction (confidence: high)
 4. Record the web-verified correction in the session's incremental terminology table
+🔴 web search 超时或无结果 → 查 Failure Handling 表「联网 web search 失败」
 
 **Examples:**
 | Suspect Term | Search Query | Likely Correction | Confidence |
@@ -225,6 +227,7 @@ Apply consistent mixed-language formatting rules before punctuation removal.
 **Scope:** Applied after ASR calibration, before punctuation removal.
 
 **Execution**: Run `scripts/apply_spacing.py` on the line-by-line subtitle text for deterministic CJK-Latin spacing. Then AI-review the output for protection zones, edge cases, and custom terminology.
+🔴 脚本执行报错 → 查 Failure Handling 表「spacing 脚本执行失败」
 
 **Rules:**
 
@@ -466,21 +469,25 @@ See `references/example.md` for a complete worked example (input → processing 
 - Preserve exact timestamps and structure (SRT only)
 - Remember user-verified corrections during the session
 
-## Error Handling
+## Failure Handling
 
-### Invalid File:
-- Verify the file is a valid SRT format (if `.srt`) or readable plain text (if `.txt`)
-- Check for proper timestamp formatting (SRT only)
-- Ensure subtitle numbering is sequential (SRT only)
-- Reject unsupported file formats with a clear message
+Each workflow step has an explicit failure branch. Follow this table when any step does not produce the expected result.
 
-### Ambiguous Cases:
-- When a word might be a filler or meaningful, use context to decide
-- When uncertain, preserve original text
-
-### Empty Subtitles After Cleanup:
-- If a subtitle becomes empty after filler removal, keep a minimal meaningful portion
-- Don't output completely empty subtitle blocks
+| 触发条件 | 一线修复 | 仍失败兜底 |
+|---------|---------|-----------|
+| SRT 文件解析失败（格式无效/时间戳错误/编号不连续） | 提示用户并提供行号 | 回退为 TXT 逐行处理，不做时间轴保证 |
+| 领域检测无匹配 | 使用通用术语表 | 跳过术语校准，仅执行其他步骤 |
+| 繁转简后文本无变化（输入已为简体） | 跳过本步，继续下一步 | — |
+| 口癖去除后字幕变空 | 保留最小有意义的词组 | 保留原始文本并标记 `#unmodified` |
+| 的/得/地修正后语法不通 | 回退到原始版本，标记 `#uncertain` | 保留原始，在 diff 中标记 ❗ |
+| 术语表查找无匹配 | 回退到 AI 上下文猜测 | 标记为低置信度（50-69%）提交用户确认 |
+| 联网 web search 失败（超时/无结果） | 跳过联网校准，使用本地术语表 | 标记该词为低置信度（50-69%），在 diff 中提示用户自行确认 |
+| spacing 脚本执行失败 | 回退到纯 AI 混排处理 | 跳过混排步骤，记录警告 |
+| 标点去除后字幕变空 | 保留原始文本的骨干部分 | 保留原始并标记 `#punctuation_removed_failed` |
+| 游戏书名号标记过泛（误标工具名） | 撤销该条标记 | 保留不做书名号标记 |
+| 单行合并后超过 40 字无法拆分（无语义断点） | 在空格/标点处硬拆分 | 保持现状，标记 `#overflow` |
+| 用户拒绝所有修改 | 直接输出原始文件 | 输出原始文件并附加提示「已跳过所有修改」 |
+| 增量术语表冲突（session 表与静态表不一致） | session 表优先 | 在 diff 中展示两条记录供用户选择 |
 
 ## Additional Resources
 
