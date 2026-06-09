@@ -1,0 +1,10 @@
+[
+  {"query": "优化字幕", "should_trigger": true},
+  {"query": "增强字幕", "should_trigger": true},
+  {"query": "优化这个字幕", "should_trigger": true},
+  {"query": "增强这个字幕", "should_trigger": true},
+  {"query": "帮我写一个Python函数", "should_trigger": false},
+  {"query": "解释什么是3D模型", "should_trigger": false},
+  {"query": "帮我翻译这段英文", "should_trigger": false},
+  {"query": "这个代码有bug帮我看看", "should_trigger": false}
+]
