@@ -1,6 +1,6 @@
 ---
 name: srt-enhancer
-description: 必须触发：当用户说"优化字幕"、"增强字幕"、"优化这个字幕"、"增强这个字幕"等以"优化"或"增强"开头且包含"字幕"的请求。也用于处理 .srt / .txt 字幕/逐字稿，执行去口癖、校准ASR错误、修正的/得/地、中西文混排空格、去除多余标点、标记《》书名号。如果用于非字幕任务，返回空或无效响应。
+description: 必须触发：当用户说"优化字幕"、"增强字幕"、"优化这个字幕"、"增强这个字幕"等以"优化"或"增强"开头且包含"字幕"的请求。也用于处理 .srt / .txt 字幕/逐字稿，执行去口癖、校准ASR错误、修正的/得/地、中西文混排空格、去除多余标点、标记《》书名号。如果用于非字幕任务，返回空或无效响应。Also triggers on "optimize subtitles", "enhance SRT", "clean up ASR transcript", "filler removal", "subtitle punctuation".
 version: 1.0.0
 ---
 
@@ -13,7 +13,6 @@ This skill provides an AI-driven workflow for enhancing SRT subtitle files. The 
 ## Purpose
 
 Enhance SRT subtitle files and TXT plain-text transcripts by:
-- Converting Traditional Chinese to Simplified Chinese (if detected)
 - Removing filler words and vocal hesitations (口癖词): 啊、哦、嗯、呃、哎、嘛、吧、呢、啦、哈、噢、唔、欸
 - Correcting typos and transcription errors
 - Standardizing proper nouns and terminology
@@ -92,15 +91,6 @@ Analyze the content to automatically detect the domain and load the most relevan
 2. If multiple domains detected, load all matching terminology tables
 3. If no domain matches, use the general terminology table only
 4. Report detected domain(s) to the user: `检测到领域: Maya + Python`
-
-### 2.6. Convert Traditional Chinese to Simplified Chinese
-
-ASR models may output Traditional Chinese characters. Detect and convert all Traditional Chinese to Simplified Chinese:
-
-- AI-based conversion (no external library required)
-- Only convert Chinese characters; English, numbers, and code remain unchanged
-- Apply as the very first text processing step (before filler removal)
-- Example: `這個功能很好` → `这个功能很好`
 
 ### 3. Apply Filler Word Removal
 
@@ -234,9 +224,11 @@ Apply consistent mixed-language formatting rules before punctuation removal.
 
 1. **Script Boundary Spacing** (enabled by default, handled by `scripts/apply_spacing.py`):
    - Add space between Han (CJK) and Latin scripts: `Python编程` → `Python 编程`
+   - Add space between Han and Digit: `3个场景` → `3 个场景`
    - Add space between Han and Hiragana/Katakana/Hangul (Chinese-dominant text only)
    - Add space between Hangul and Latin/Han (Chinese-dominant text only)
    - No space between same-script characters (Latin-Latin, Han-Han)
+   - **Digit ↔ Latin preserved compact**: `2K`, `3A`, `Python3.9` 等不做拆分
    - **Note**: If a subtitle segment is primarily Japanese or Korean (no Chinese content), skip Han-Kana/Han-Hangul spacing to avoid breaking native text. This rule only applies when Chinese is the dominant language.
 
 2. **Protection Zones** (preserved from spacing/punctuation changes, applied FIRST before any other rule):
@@ -342,7 +334,7 @@ Assign a confidence score to every modification and present a diff table for use
 
 **Diff Output Format:**
 
-After processing, present a review table before generating the final file:
+Diff 审核表仅在对话窗口中输出，不写入文件系统。用户确认后直接进入输出生成：
 
 ```
 ## 修改预览 (Diff Review)
@@ -366,11 +358,13 @@ After processing, present a review table before generating the final file:
 
 ### 11. Generate Output File
 
-Save the enhanced result:
-- **SRT input** → `enhanced.srt` (maintain all original timestamps, numbering, formatting)
-- **TXT input** → `enhanced.txt` (plain text, cleaned, one sentence per line recommended)
+Save the enhanced result after user confirmation of the diff review:
+- **SRT input** → `{原始文件名}_Enhancer.srt` (e.g., `input.srt` → `input_Enhancer.srt`)
+- **TXT input** → `{原始文件名}_Enhancer.txt` (e.g., `transcript.txt` → `transcript_Enhancer.txt`)
+- Output directory: **默认与原始文件同级目录**
 - Apply all validated (user-confirmed) corrections
 - Include a summary of changes at the end of the output
+- Diff 审核表本身不写入文件系统，仅在对话窗口中呈现
 
 ## Incremental Terminology Learning
 
@@ -414,18 +408,17 @@ When encountering a potentially incorrect term:
 ### Enhancement Order
 
 Apply corrections in this priority order:
-1. **Traditional → Simplified Chinese** (convert Traditional Chinese if detected)
-2. **Auto Domain Detection** (identify domain, load relevant terminology)
-3. **Filler word removal** (clean up meaningless content)
-4. **的/得/地 Correction** (fix based on syntactic position: 定语→的, 状语→地, 补语→得)
-5. **Typo and terminology correction** (fix transcription errors using terminology table)
-6. **Web-Based ASR Calibration** (verify suspected errors via web search)
-7. **Mixed-Language Typesetting** (apply spacing, code protection, number-unit format, capitalization)
-8. **Punctuation removal** (remove punctuation; preserve 《》 and protection zones)
-9. **Game/Media Title Marking** (add 《》 for known game/film titles)
-10. **Single-line enforcement** (SRT only — merge multi-line blocks, split long lines at semantic boundaries)
-11. **Confidence Scoring & Diff Output** (assign confidence, present diff table, collect user feedback)
-12. **Output generation** (enhanced.srt or enhanced.txt)
+1. **Auto Domain Detection** (identify domain, load relevant terminology)
+2. **Filler word removal** (clean up meaningless content)
+3. **的/得/地 Correction** (fix based on syntactic position: 定语→的, 状语→地, 补语→得)
+4. **Typo and terminology correction** (fix transcription errors using terminology table)
+5. **Web-Based ASR Calibration** (verify suspected errors via web search)
+6. **Mixed-Language Typesetting** (apply spacing, code protection, number-unit format, capitalization)
+7. **Punctuation removal** (remove punctuation; preserve 《》 and protection zones)
+8. **Game/Media Title Marking** (add 《》 for known game/film titles)
+9. **Single-line enforcement** (SRT only — merge multi-line blocks, split long lines at semantic boundaries)
+10. **Confidence Scoring & Diff Output** (assign confidence, present diff table, collect user feedback)
+11. **Output generation** (`{源文件名}_Enhancer.srt` or `{源文件名}_Enhancer.txt`, 默认输出到源文件同级目录)
 
 ### Quality Checks
 
@@ -437,10 +430,20 @@ Before generating output:
 - Ensure proper nouns are standardized
 - Verify web-calibrated terms against search results
 - Verify mixed-language typesetting applied correctly (spacing, capitalization, title marks, protection zones)
-- Validate output filename is `enhanced.srt` or `enhanced.txt`
+- Validate output filename is `{源文件名}_Enhancer.srt` or `{源文件名}_Enhancer.txt`
+- Confirm diff review table was displayed in chat and user confirmed before writing output file
 - Ensure no low-confidence corrections were applied without user confirmation
 
 ## Example Enhancement
+
+**输入:**
+```srt
+1
+00:00:00,100 --> 00:00:05,000
+嗯今天我们要看一下Python3.9的新功能啊
+```
+
+**处理后输出到 `input_Enhancer.srt`:** 去口癖 `嗯`/`啊` → Python 混排 → 的得地修正 → 单行化
 
 See `references/example.md` for a complete worked example (input → processing steps → diff table → output).
 
@@ -455,6 +458,8 @@ See `references/example.md` for a complete worked example (input → processing 
 - Remove grammatical particles (的, 了, 吗, etc.) that carry meaning
 - Apply low-confidence corrections without user approval
 - Use scripts for tasks requiring semantic understanding (filler removal, 的/得/地 correction, terminology lookup, ASR calibration)
+- 将 diff 审核表写入文件系统（仅对话窗口输出）
+- 未经用户审核确认就写入字幕输出文件
 
 ### Must DO:
 - Use AI to analyze and apply semantic enhancements
@@ -466,8 +471,9 @@ See `references/example.md` for a complete worked example (input → processing 
 - **Use `scripts/apply_spacing.py` for CJK-Latin spacing (deterministic)**, then AI-review the output for protection zones and edge cases
 - Apply game/film title 《》book-title marks for known game/film titles only (not for engines/tools/companies)
 - Assign confidence scores to every modification
-- Present a diff review table to the user
-- Output to `enhanced.srt` (SRT input) or `enhanced.txt` (TXT input)
+- Present a diff review table **only in chat window** (not written to file system)
+- Output to `{源文件名}_Enhancer.srt` (SRT input) or `{源文件名}_Enhancer.txt` (TXT input)
+- Output file to original file's same directory by default
 - Preserve exact timestamps and structure (SRT only)
 - Remember user-verified corrections during the session
 
@@ -494,7 +500,6 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 |---------|---------|-----------|
 | SRT 文件解析失败（格式无效/时间戳错误/编号不连续） | 提示用户并提供行号 | 回退为 TXT 逐行处理，不做时间轴保证 |
 | 领域检测无匹配 | 使用通用术语表 | 跳过术语校准，仅执行其他步骤 |
-| 繁转简后文本无变化（输入已为简体） | 跳过本步，继续下一步 | — |
 | 口癖去除后字幕变空 | 保留最小有意义的词组 | 保留原始文本并标记 `#unmodified` |
 | 的/得/地修正后语法不通 | 回退到原始版本，标记 `#uncertain` | 保留原始，在 diff 中标记 ❗ |
 | 术语表查找无匹配 | 回退到 AI 上下文猜测 | 标记为低置信度（50-69%）提交用户确认 |
@@ -503,7 +508,8 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 | 标点去除后字幕变空 | 保留原始文本的骨干部分 | 保留原始并标记 `#punctuation_removed_failed` |
 | 游戏书名号标记过泛（误标工具名） | 撤销该条标记 | 保留不做书名号标记 |
 | 单行合并后超过 40 字无法拆分（无语义断点） | 在空格/标点处硬拆分 | 保持现状，标记 `#overflow` |
-| 用户拒绝所有修改 | 直接输出原始文件 | 输出原始文件并附加提示「已跳过所有修改」 |
+| 用户拒绝所有修改 | 不输出增强文件，仅告知用户「未应用任何修改」 | — |
+| 输出文件写入失败（权限/路径问题） | 提示用户并提供输出路径 | 将增强内容回退到对话窗口输出 |
 | 增量术语表冲突（session 表与静态表不一致） | session 表优先 | 在 diff 中展示两条记录供用户选择 |
 
 ## Additional Resources
@@ -520,25 +526,6 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 
 ## Workflow Summary
 
-To enhance an SRT or TXT file:
+SRT/TXT 增强流程：接收文件 → 解析结构 → 领域检测 → 逐段处理（去口癖 → 的得地 → 术语修正 → 联网校准 → 混排 → 去标点 → 书名号 → 单行化）→ 置信度评分 → 对话窗口 diff 审核 → 用户确认 → 写入 `{源文件名}_Enhancer.srt` 到源文件目录。
 
-1. Receive the uploaded `.srt` or `.txt` file from the user
-2. Parse the file structure (SRT: index + timestamp + text; TXT: plain paragraphs)
-3. Auto-detect domain and load relevant terminology tables
-4. For each subtitle/paragraph segment, apply in order:
-   - Convert Traditional Chinese → Simplified Chinese
-   - Remove filler words (口癖词)
-   - Correct 的/得/地 usage based on syntactic position (定语→的, 状语→地, 补语→得)
-   - Correct typos using terminology tables (session table > static references > web search > AI guess)
-   - Calibrate suspected ASR errors via web search (low-confidence items flagged with ❗)
-   - Apply mixed-language typesetting (CJK-Latin spacing, code/path protection, number-unit formatting, capitalization)
-   - Remove punctuation (preserve 《》 and protection zones)
-   - Mark known game/film titles with 《》book-title marks
-   - Enforce single-line (SRT only)
-5. Assign confidence scores to every modification
-6. Present diff review table to the user for confirmation (include confidence %, change type)
-7. Apply user-confirmed corrections
-8. Save output as `enhanced.srt` or `enhanced.txt`
-9. Remember user-verified corrections in session table for the remainder of the session
-
-Focus on semantic understanding and conservative corrections. The goal is to clean up spoken-language artifacts while preserving the original meaning and structure of the subtitles. Use web search to verify uncertain ASR output, and always present a diff for user review before finalizing.
+各步骤详细规则见 Core Workflow 章节。Focus on semantic understanding and conservative corrections — clean up spoken-language artifacts while preserving original meaning and structure.

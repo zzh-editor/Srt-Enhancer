@@ -11,8 +11,7 @@ Usage:
 Rules:
   - Han ↔ Latin: add space (Python编程 → Python 编程)
   - Han ↔ Digit: add space (3个场景 → 3 个场景)
-  - Latin → Digit: add space (Python3.9 → Python 3.9)
-  - Digit → Latin: keep compact if known unit (5GB → 5GB)
+  - Latin ↔ Digit: preserved compact (2K, 3A, Python3.9 unchanged)
   - Protection zones (inline code `...`, math $...$, URLs) are preserved.
   - Number-unit compact: GB, MB, KB, TB, fps, FPS, etc.
 """
@@ -88,9 +87,9 @@ def _apply_script_spacing(text):
 
         if prev_is_han and (cur_is_latin or cur_is_digit):
             result.append(' ')
-        elif prev_is_latin and (cur_is_han or cur_is_digit):
+        elif prev_is_latin and cur_is_han:
             result.append(' ')
-        elif prev_is_digit and (cur_is_han or cur_is_latin):
+        elif prev_is_digit and cur_is_han:
             result.append(' ')
 
         result.append(ch)
