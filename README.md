@@ -17,27 +17,29 @@
 
 ## 安装
 
-### OpenCode
+### 方式一：npx skills（推荐）
 
 ```bash
-# 安装到项目级
-cp -r srt-enhancer .opencode/skills/
-
-# 或安装到用户级
-cp -r srt-enhancer ~/.config/opencode/skills/
+npx skills add zzh-editor/Srt-Enhancer
 ```
 
-### Claude Code
+自动安装到当前 agent（OpenCode / Claude Code / Cursor 等均可）。
+
+### 方式二：手动复制
 
 ```bash
-cp -r srt-enhancer ~/.claude/skills/
+# OpenCode 项目级
+cp -r Srt-Enhancer .opencode/skills/
+
+# OpenCode 用户级
+cp -r Srt-Enhancer ~/.config/opencode/skills/
+
+# Claude Code
+cp -r Srt-Enhancer ~/.claude/skills/
+
+# Cursor
+cp -r Srt-Enhancer ~/.cursor/skills/
 ```
-
-### Cursor
-
-将 `srt-enhancer` 目录放到项目下的 `.cursor/skills/` 或用户配置目录的 `skills/` 下。
-
-> 更多安装方式见 [Agent Skills 规范](https://agentskills.io/)
 
 ## 使用
 
