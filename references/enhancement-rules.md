@@ -354,7 +354,7 @@ For each potential enhancement:
 
 ### Post-Enhancement Validation
 
-- [ ] Output file is `enhanced.srt`
+- [ ] Output file is `{源文件名}_Enhancer.srt` 或 `{源文件名}_Enhancer.txt`
 - [ ] Subtitle count matches original
 - [ ] All timestamps identical to original
 - [ ] No double spaces introduced
@@ -514,12 +514,10 @@ Every modification must be assigned a confidence score and a reason.
 
 | Score Range | Label | Meaning |
 |------------|-------|---------|
-| 95-100% | Certain | Terminology table exact match, web-verified with authoritative source |
-| 85-94% | High | Clear pattern match (e.g., `嗯` at sentence start), obvious typo |
-| 70-84% | Medium-High | Context-dependent but likely correct |
-| 60-69% | Medium | Ambiguous — needs context to confirm |
-| 50-59% | Low | Uncertain — flag for user review |
-| < 50% | Skip | Do not apply |
+| ≥ 90% | High | Clear correction — terminology match, web-verified, or obvious typo |
+| 70-89% | Medium | Likely correct but minor ambiguity — e.g., homophone in context |
+| 50-69% | Low | Uncertain — flag for user review |
+| < 50% | Skip | Don't apply; preserve original |
 
 ### 9.2 Score by Change Type
 
@@ -568,7 +566,7 @@ Maintain an in-memory session terminology table that is checked before any other
 ```
 Priority order when evaluating a term:
 1. Session table (highest priority, user-confirmed this session)
-2. Static references (terminology.md, asr-corrections-gaming.md)
+2. Static references (terminology.md)
 3. Web search cache (if previously searched)
 4. Live web search (if confidence < 70% and not in cache)
 5. AI contextual inference (lowest priority, flag for review)
@@ -647,114 +645,4 @@ The user can control the session table via natural language:
 
 Focus on improving readability while preserving the natural flow and structure of the original subtitles. Use web search as a precision tool — only when the AI's knowledge is genuinely uncertain. Always present a clear diff for user review, and learn from feedback to make the session progressively smoother.
 
----
-
-## 13. Mixed-Language Typesetting
-
-This section defines rules for consistent mixed-language typesetting in SRT/TXT output. Applied after ASR calibration, before punctuation removal.
-
-### 13.1 Script Boundary Spacing
-
-Add a single ASCII space between Han and Latin scripts at every boundary:
-
-| Before | After | Notes |
-|--------|-------|-------|
-| `Python编程` | `Python 编程` | Latin → Han |
-| `编程Python` | `编程 Python` | Han → Latin |
-| `5个场景` | `5 个场景` | Digit → Han |
-| `场景5` | `场景 5` | Han → Digit |
-| `GPU驱动` | `GPU 驱动` | Acronym → Han |
-| `驱动GPU` | `驱动 GPU` | Han → Acronym |
-| `Python3.9` | `Python 3.9` | Word → version number |
-| `v1.0版本` | `v1.0 版本` | Version → Han |
-| `他说OK了` | `他说 OK 了` | Han → Latin → Han |
-
-**Exceptions** (same-script adjacent — no space):
-- Latin-Latin: `GPU driver`, `match case`, `Unreal Engine`
-- Han-Han: `编程语言`, `场景美术`
-- Han-Japanese: `プログラミング言語` (Chinese-dominant text: space added between Han and Kana; Japanese-dominant text: treat as same-script, no space)
-- Digit-Digit: `3.9`, `5.0`
-
-### 13.2 Protection Zones
-
-Content inside protection zones must NOT have spacing/punctuation applied:
-
-| Zone | Pattern | Example |
-|------|---------|---------|
-| Inline code | `` `code` `` | `` `print("hello")` `` |
-| Fenced code | ```` ``` ```` | ```` ```python ```` |
-| Inline math | `$...$` | `$E=mc^2$` |
-| Display math | `$$...$$` | `$$\sum x$$` |
-| LaTeX inline | `\(...\)` | `\(\alpha\)` |
-| LaTeX display | `\[...\]` | `\[\int\]` |
-| File path | `/path/to/file` | `/usr/local/bin` |
-| Windows path | `C:\...` | `C:\Users\name\file.py` |
-| URL | `https://...` | `https://example.com` |
-| Email | `user@host` | `foo@bar.com` |
-
-**Implementation**: In each subtitle, detect protection zones via regex BEFORE applying spacing/correction. Replace with placeholders, apply formatting, then restore.
-
-**Regex caution**: The Unix path pattern `\/[^\s,;:!?）)]+` is intentionally permissive — it may match non-path text containing `/`. Only apply path protection when the match resembles a real file path (starts with common prefixes like `/usr`, `/opt`, `/home`, `/etc`, `/var`, or contains a file extension). Inline code (backtick) and math (`$`) zones have the highest protection priority and should be matched first.
-
-### 13.3 Number-Unit Formatting
-
-**Default**: Compact (no space between number and unit)
-
-| Example | Style |
-|---------|-------|
-| `5GB` | Compact (default) |
-| `v1.0` | Compact version |
-| `v2.3.1` | Compact version |
-| `3.9` | Number spacing preserved |
-| `1920×1080` | Resolution — no space |
-
-**User override**: `数字单位加空格` → spaced format (`5 GB`)
-
-**Priority note**: Number-unit compact formatting takes precedence over the general script-boundary spacing rule. For example, `5GB` stays compact rather than becoming `5 G B`. Version numbers (`v1.0`) are always compact regardless of settings.
-
-### 13.4 Capitalization Heuristics
-
-Preserve and standardize known technical acronyms and proper nouns:
-
-| Category | Examples |
-|----------|---------|
-| Known acronyms | GPU, CPU, API, SDK, AI, HTML, CSS, JS, TS, JSON, SQL, HTTP, REST, TCP, IP, USB, HDMI, SSD, HDD, RAM, VRAM |
-| CamelCase/PascalCase | `polyCube`, `Keyframe`, `VertexBuffer`, `RenderPipeline` |
-| Brand names | Unreal Engine, Unity, Maya, Blender, Photoshop, Visual Studio Code |
-| Terminology table entries | Entries in `terminology.md` and `asr-corrections-gaming.md` override heuristics |
-
-**Lowercase exceptions**: Common English words in Chinese context (prepositions, articles) remain lowercase: `the`, `for`, `in`, `on`, `of`, `to`, `with`.
-
-### 13.5 Game/Media Title Marking
-
-Only add 《》 for known game/film/TV series titles. Do NOT add for engines, tools, companies, or platforms.
-
-**Rule**: Check against a curated list of known game/film titles and context cues:
-- Game titles: `黑神话：悟空` → 《黑神话：悟空》, `Call of Duty` → 《Call of Duty》, `对马岛之魂` → 《对马岛之魂》
-- Film titles: `流浪地球` → 《流浪地球》, `阿凡达` → 《阿凡达》
-- NOT for engines: `Unreal Engine 5` (no 《》)
-- NOT for tools: `Photoshop`, `Substance Painter` (no 《》)
-- NOT for companies: `Bungie`, `Epic Games`, `NVIDIA` (no 《》)
-- NOT for platforms: `Steam`, `PS5`, `Xbox` (no 《》)
-
-**Context cue detection**: If the text contains phrases like "游戏"、"玩"、"打"、"通关" before/after a proper noun, increase likelihood of game title.
-
-**Pipeline position**: This marking step runs **after** punctuation removal to prevent 《》 from being deleted. Title identification (what to mark) is done during the mixed typesetting step, but the actual insertion of 《》 characters happens in a separate step after punctuation removal.
-
-### 13.6 Sentence-Level Spacing
-
-Preserve single spaces after sentence boundaries in mixed-language text:
-- `look at this.下一个` → `look at this. 下一个`
-- `就是这个。Then` → `就是这个。 Then`
-
-### 13.7 User Configuration Commands
-
-| Command | Effect |
-|---------|--------|
-| `中日文之间不加空格` | Disable CJK-Latin spacing |
-| `数字单位加空格` | `5GB` → `5 GB` |
-| `保护代码块` | Enable code protection (default: on) |
-| `显示混排配置` | Show current mixed typesetting settings |
-| `重置混排配置` | Reset to defaults |
-| `版本号紧凑` | `v1. 0` → `v1.0` (default) |
-| `显示混排详情` | Show per-subtitle typesetting changes in diff |
+混排规范详见 `references/mixed-typesetting.md`。

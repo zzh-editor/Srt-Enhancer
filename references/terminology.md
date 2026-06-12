@@ -202,6 +202,54 @@
 | NYU | NYU | 纽约大学（无需修正） |
 | CMU | CMU | 卡内基梅隆大学（无需修正） |
 
+### 5.5 已知正确术语（无需修正）
+
+以下术语在 ASR 输出中通常是正确的，无需修改：
+
+| ASR 输出 | 判定 | 说明 |
+|---------|------|------|
+| Rookies Award | 正确 ✅ | 比赛名称 |
+| Keyframe | 正确 ✅ | 赛道类别（注：术语 `keyframe` 需修正为 `Keyframe`） |
+| Digital Fashion | 正确 ✅ | 赛道类别 |
+| Game Art | 正确 ✅ | 赛道类别 |
+| EA | 正确 ✅ | 公司名称 |
+| Obsidian Entertainment | 正确 ✅ | 工作室名称 |
+| Remedy Entertainment | 正确 ✅ | 工作室名称 |
+
+---
+
+## 6. AI 3D 生成与虚幻引擎
+
+### 6.1 工具与平台
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| TertReference / preference / pure ref | PureRef | 参考图管理面板 |
+| triple 3d AI | Tripo 3D AI | AI 3D 模型生成平台 |
+| ProForce / profiles | Perforce | 版本控制系统 |
+| Cloud | Claude | Anthropic AI 模型 |
+| TabDown / TypeNode / type now / typenow | TapNow | AI 生图工具 |
+| 麦克斯 / 麦壳思 | MAXs | 课程配套插件名称 |
+
+### 6.2 3D 建模流程
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 30图 / 40图 | 三视图 / 四视图 | 多视图参考图 |
+| 白提无影影 | 白盒无阴影 | white box no shadow |
+| 左侧打 | 左侧图 | 左侧参考图 |
+| 兵器器 | 编辑器 | editor |
+| 提词词 / 骑士词 | 提示词 | prompt |
+| 虚幻物引擎 / U15 | 虚幻5引擎 / UE5 | Unreal Engine 5 |
+
+### 6.3 界面操作
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 接下号 | 加号 | 点击 + 按钮 |
+| ctrlv / ctrl+v / ctrl v | Ctrl+V | 快捷键（同理 ctrl+c/ctrl+z/ctrl+s 等） |
+| Facebook | 消耗 | token/credit consumption |
+
 ---
 
 ## 使用说明

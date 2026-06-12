@@ -44,12 +44,12 @@
 | 3 | 我們來看看啊啊 | 我们来看看 | 高(95%) | 去口癖+繁转简 |
 | 3 | Owatch | Overwatch | 高(90%) | 联网校准 |
 | 3 | Concept2 | Concept Art | 高(100%) | 术语修正(游戏行业) |
-| 3 | Owatch 得 的 Concept2 | Owatch 的 Concept Art | 高(95%) | 的/得/地修正 |
+| 3 | Owatch得的Concept2 | Owatch 的 Concept Art | 高(95%) | 的/得/地修正 |
 | 4 | 黑神话：悟空 | 《黑神话：悟空》 | 高(100%) | 书名号标记 |
 | 4 | GPU驱动 | GPU 驱动 | 高(95%) | 混排空格 |
 | 5 | 5G的纹理包 | 5GB 纹理包 | 高(90%) | 单位规范+空格 |
 
-**Output SRT (`enhanced.srt`)**:
+**Output SRT (`input_Enhancer.srt`)**:
 ```
 1
 00:00:00,000 --> 00:00:05,000

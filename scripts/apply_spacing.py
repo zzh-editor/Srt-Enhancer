@@ -1,7 +1,8 @@
 """
-Deterministic CJK-Latin spacing for mixed-language text.
+Deterministic CJK-Latin spacing and proper noun capitalization for mixed-language text.
 
-Applies script boundary spacing (Han-Latin, Han-Digit, Latin-Digit)
+Applies script boundary spacing (Han-Latin, Han-Digit, Latin-Digit),
+proper noun capitalization via case-insensitive matching,
 and number-unit compact formatting per the srt-enhancer mixed-typesetting spec.
 
 Usage:
@@ -9,9 +10,10 @@ Usage:
   python apply_spacing.py --inline "Python3.9新功能"
 
 Rules:
+  - Capitalization: case-insensitive match of known proper nouns (ue5 → UE5, maya → Maya, ...)
   - Han ↔ Latin: add space (Python编程 → Python 编程)
   - Han ↔ Digit: add space (3个场景 → 3 个场景)
-  - Latin ↔ Digit: preserved compact (2K, 3A, Python3.9 unchanged)
+   - Latin ↔ Digit: add space (Python3.9 → Python 3.9; compact units like 5GB re-compacted afterward)
   - Protection zones (inline code `...`, math $...$, URLs) are preserved.
   - Number-unit compact: GB, MB, KB, TB, fps, FPS, etc.
 """
@@ -44,6 +46,62 @@ COMPACT_UNITS = [
 COMPACT_UNITS_SORTED = sorted(COMPACT_UNITS, key=len, reverse=True)
 COMPACT_PATTERN = re.compile(r'(\d+)\s*({})'.format('|'.join(re.escape(u) for u in COMPACT_UNITS_SORTED)))
 
+# -- Capitalization map (case-insensitive matching → standard casing) --
+CAPITALIZATION_MAP: dict[str, str] = {
+    # Technical acronyms (all caps)
+    'pcie': 'PCIe',
+    'gpu': 'GPU', 'cpu': 'CPU', 'api': 'API', 'sdk': 'SDK',
+    'ai': 'AI',
+    'html': 'HTML', 'css': 'CSS', 'js': 'JS', 'ts': 'TS',
+    'json': 'JSON', 'sql': 'SQL', 'http': 'HTTP', 'rest': 'REST',
+    'tcp': 'TCP', 'ip': 'IP', 'usb': 'USB', 'hdmi': 'HDMI',
+    'ssd': 'SSD', 'hdd': 'HDD', 'ram': 'RAM', 'vram': 'VRAM',
+    'dns': 'DNS', 'dhcp': 'DHCP', 'ftp': 'FTP', 'ssh': 'SSH',
+    'ssl': 'SSL', 'tls': 'TLS',
+    'png': 'PNG', 'jpeg': 'JPEG', 'gif': 'GIF', 'svg': 'SVG',
+    'xml': 'XML', 'yaml': 'YAML', 'toml': 'TOML',
+    'cli': 'CLI', 'gui': 'GUI', 'ui': 'UI', 'ux': 'UX',
+    'ide': 'IDE', 'db': 'DB', 'vm': 'VM', 'os': 'OS', 'bios': 'BIOS',
+    # Domain-specific acronyms
+    'ue5': 'UE5', 'ps': 'PS', 'hdr': 'HDR',
+    # Brand/tool names
+    'pureref': 'PureRef', 'perforce': 'Perforce', 'tapnow': 'TapNow',
+    'claude': 'Claude', 'maya': 'Maya', 'blender': 'Blender',
+    'photoshop': 'Photoshop', 'xcode': 'Xcode', 'github': 'GitHub',
+    'nanite': 'Nanite', 'lumen': 'Lumen', 'megascans': 'Megascans',
+    # Discipline-specific terms
+    'rookies': 'Rookies', 'lightbox': 'LightBox', 'overwatch': 'Overwatch',
+    'keyframe': 'Keyframe', 'playblast': 'Playblast',
+    'hypergraph': 'Hypergraph', 'hypershade': 'Hypershade',
+    # Multi-word terms (sorted by length, matched before single-word terms)
+    'unreal engine': 'Unreal Engine',
+    'tripo 3d ai': 'Tripo 3D AI',
+    'concept artist': 'Concept Artist',
+    'world partition': 'World Partition',
+    'concept art': 'Concept Art',
+    'art center': 'Art Center',
+    'paint over': 'Paint Over',
+}
+
+# Generate Ctrl shortcut variants
+for key_char in ('v', 'c', 'z', 's', 'a', 'x', 'p'):
+    upper = key_char.upper()
+    CAPITALIZATION_MAP[f'ctrl+{key_char}'] = f'Ctrl+{upper}'
+    CAPITALIZATION_MAP[f'ctrl {key_char}'] = f'Ctrl+{upper}'
+    CAPITALIZATION_MAP[f'ctrl{key_char}'] = f'Ctrl+{upper}'
+
+# Build case-insensitive regex, multi-word terms first (longer → higher priority)
+_CAP_TERMS_SORTED = sorted(CAPITALIZATION_MAP, key=len, reverse=True)
+CAP_PATTERN = re.compile(
+    '|'.join(r'\b' + re.escape(t) + r'\b' for t in _CAP_TERMS_SORTED),
+    re.IGNORECASE | re.ASCII,
+)
+
+
+def _apply_capitalization(text: str) -> str:
+    """Capitalize known proper nouns using case-insensitive word-boundary matching."""
+    return CAP_PATTERN.sub(lambda m: CAPITALIZATION_MAP[m.group(0).lower()], text)
+
 
 def _protect(text):
     """Replace protection zones with placeholders, return (processed, map)."""
@@ -71,9 +129,8 @@ def _apply_number_unit_compact(text):
 
 def _apply_script_spacing(text):
     """
-    Insert space at every Han ↔ Latin and Han ↔ Digit boundary.
-    Latin ↔ Digit boundary: add space (compact units are re-joined
-    by _apply_number_unit_compact running afterward).
+    Insert space at every Han ↔ Latin, Han ↔ Digit, and Latin ↔ Digit boundary.
+    Compact units are re-joined by _apply_number_unit_compact running afterward.
     """
     result = []
     prev_is_han = False
@@ -91,6 +148,10 @@ def _apply_script_spacing(text):
             result.append(' ')
         elif prev_is_digit and cur_is_han:
             result.append(' ')
+        elif prev_is_latin and cur_is_digit:
+            result.append(' ')
+        elif prev_is_digit and cur_is_latin:
+            result.append(' ')
 
         result.append(ch)
         prev_is_han = cur_is_han
@@ -101,9 +162,10 @@ def _apply_script_spacing(text):
 
 
 def apply_spacing(line):
-    """Apply full spacing pipeline to a single text line."""
+    """Apply full spacing + capitalization pipeline to a single text line."""
     line = line.rstrip('\n')
     text, mapping = _protect(line)
+    text = _apply_capitalization(text)
     text = _apply_script_spacing(text)
     text = _apply_number_unit_compact(text)
     text = _restore(text, mapping)

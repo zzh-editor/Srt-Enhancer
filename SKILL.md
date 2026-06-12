@@ -1,6 +1,7 @@
 ---
 name: srt-enhancer
 description: 必须触发：当用户说"优化字幕"、"增强字幕"、"优化这个字幕"、"增强这个字幕"等以"优化"或"增强"开头且包含"字幕"的请求。也用于处理 .srt / .txt 字幕/逐字稿，执行去口癖、校准ASR错误、修正的/得/地、中西文混排空格、去除多余标点、标记《》书名号。如果用于非字幕任务，返回空或无效响应。Also triggers on "optimize subtitles", "enhance SRT", "clean up ASR transcript", "filler removal", "subtitle punctuation".
+allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, WebFetch]
 version: 1.0.0
 ---
 
@@ -109,6 +110,13 @@ Scan each subtitle segment and remove filler words (口癖词):
 - **不要将自然话语标记（Discourse Markers）视为口癖：** 也就是说、然后、那么、那（句首）、说白了、这边的话、对吧、好吧 等是中文口语中的惯用连接手段和过渡词，不会干扰理解，不应删减
 
 Reference `references/enhancement-rules.md` for detailed filler word handling strategies.
+
+### 3.4. Clean Up Spaces
+
+After filler word removal, clean up any spacing artifacts:
+- Replace consecutive spaces with a single space
+- Trim leading/trailing whitespace from each subtitle line
+- This ensures clean input for subsequent steps (的/得/地 correction, terminology, typesetting, punctuation removal)
 
 ### 3.5. Apply 的/得/地 Correction
 
@@ -228,7 +236,7 @@ Apply consistent mixed-language formatting rules before punctuation removal.
    - Add space between Han and Hiragana/Katakana/Hangul (Chinese-dominant text only)
    - Add space between Hangul and Latin/Han (Chinese-dominant text only)
    - No space between same-script characters (Latin-Latin, Han-Han)
-   - **Digit ↔ Latin preserved compact**: `2K`, `3A`, `Python3.9` 等不做拆分
+   - **Digit ↔ Latin add space**: `Python3.9` → `Python 3.9`（紧凑单位如 `5GB` 在后续数字单位步骤中还原为紧凑形式）
    - **Note**: If a subtitle segment is primarily Japanese or Korean (no Chinese content), skip Han-Kana/Han-Hangul spacing to avoid breaking native text. This rule only applies when Chinese is the dominant language.
 
 2. **Protection Zones** (preserved from spacing/punctuation changes, applied FIRST before any other rule):
@@ -372,7 +380,7 @@ During a session, maintain a **session terminology table** that grows as the use
 
 ### How It Works
 
-1. Start of session: Load the static references (`references/terminology.md`, `references/asr-corrections-gaming.md`)
+1. Start of session: Load the static reference `references/terminology.md`
 2. During processing: When a correction is made (typ fix, web-calibrated term, terminology match), record it in the session table
 3. User review: When the user confirms a correction in the diff review, promote it to the session table
 4. Subsequent blocks: Before making any terminology decision, first check the session table (highest priority), then the static references, then fall back to web search
@@ -393,7 +401,7 @@ session_terminology.jsonc (in-memory, not persisted to disk):
 
 When encountering a potentially incorrect term:
 1. **Session table** (user-confirmed this session) → apply immediately (high confidence)
-2. **Static terminology.md / asr-corrections-gaming.md** → apply (high confidence)
+2. **Static terminology.md** → apply (high confidence)
 3. **Web search verification** → apply with medium-high confidence
 4. **AI contextual guess** → apply with low confidence, always flag for review
 
@@ -504,7 +512,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 | 的/得/地修正后语法不通 | 回退到原始版本，标记 `#uncertain` | 保留原始，在 diff 中标记 ❗ |
 | 术语表查找无匹配 | 回退到 AI 上下文猜测 | 标记为低置信度（50-69%）提交用户确认 |
 | 联网 web search 失败（超时/无结果） | 跳过联网校准，使用本地术语表 | 标记该词为低置信度（50-69%），在 diff 中提示用户自行确认 |
-| spacing 脚本执行失败 | 回退到纯 AI 混排处理 | 跳过混排步骤，记录警告 |
+| spacing 脚本执行失败（`python3`/`python` 均不可用或报错） | 回退到纯 AI 混排处理 | 跳过混排步骤，记录警告 |
 | 标点去除后字幕变空 | 保留原始文本的骨干部分 | 保留原始并标记 `#punctuation_removed_failed` |
 | 游戏书名号标记过泛（误标工具名） | 撤销该条标记 | 保留不做书名号标记 |
 | 单行合并后超过 40 字无法拆分（无语义断点） | 在空格/标点处硬拆分 | 保持现状，标记 `#overflow` |
@@ -517,8 +525,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 ### Reference Files
 - **`references/example.md`** - Complete worked example with input, processing steps, diff table, and output
 - **`references/enhancement-rules.md`** - Detailed rules for filler word removal, typo detection, semantic analysis strategies, web-based ASR verification, confidence scoring, and incremental learning
-- **`references/terminology.md`** - Maya and Python terminology mapping table for correcting ASR misrecognition of technical terms
-- **`references/asr-corrections-gaming.md`** - Gaming industry (Rookies, Concept Art, etc.) ASR correction table
+- **`references/terminology.md`** - Maya, Python, Gaming, and AI 3D terminology mapping table for correcting ASR misrecognition
 - **`references/mixed-typesetting.md`** - Complete specification for mixed-language typesetting (CJK-Latin spacing, protection zones, number formats, capitalization, game title marking, user configuration)
 
 ### Scripts

@@ -193,7 +193,7 @@ Preserve original casing:
 
 ### 5.4 Terminology Table Override
 
-Entries in `terminology.md` and `asr-corrections-gaming.md` take priority over heuristics.
+Entries in `terminology.md` take priority over heuristics.
 
 ### 5.5 Lowercase Exceptions
 
