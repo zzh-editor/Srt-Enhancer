@@ -254,10 +254,10 @@ Sentence-ending punctuation: `.`, `。`, `!`, `！`, `?`, `？`
 
 ### 8.1 Position in Enhancement Order
 
-Mixed-language typesetting is step 7 in the 12-step pipeline:
-1. 繁转简
-2. 领域检测
-3. 去口癖
+Mixed-language typesetting is step 7 in the pipeline:
+1. 领域检测
+2. 去口癖
+3. 空格清理
 4. 的/得/地修正
 5. 术语修正
 6. ASR联网校准
