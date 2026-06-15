@@ -2,6 +2,19 @@
 
 字幕增强工具（SRT/TXT），提供去口癖、ASR 纠错、的/得/地修正、中西文混排空格、标点清理等流水线处理。
 
+## 安装
+
+```bash
+# 使用 npx 安装（推荐）
+npx skills@latest install https://github.com/zzh-editor/Srt-Enhancer
+
+# 或直接克隆
+git clone https://github.com/zzh-editor/Srt-Enhancer.git
+cd Srt-Enhancer
+```
+
+> 需要 Python 3.8+。
+
 ## Pipeline
 
 ```
