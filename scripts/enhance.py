@@ -401,6 +401,10 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
             DOT_PH = "PROTECTDOT"
             text = re.sub(r'(\d)\.(\d)', rf'\1{DOT_PH}\2', text)
 
+        # Protect 数字% patterns (90%, 50%, etc.)
+        PCT_PH = "PROTECTPCT"
+        text = re.sub(r'(\d)%', rf'\1{PCT_PH}', text)
+
         for i, p in enumerate(preserve):
             if len(p) == 2:  # paired like 《》
                 placeholder = f"\x00PROTECT_PAIR_{i}\x00"
@@ -420,6 +424,7 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
         # Restore protected zones
         text = text.replace("PROTECTCOLON", ":")
         text = text.replace("PROTECTDOT", ".")
+        text = text.replace("PROTECTPCT", "%")
         for placeholder, orig in protected:
             if len(orig) == 2:
                 pattern_ph = re.escape(placeholder)

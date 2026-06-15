@@ -136,6 +136,7 @@ def _apply_script_spacing(text):
     prev_is_han = False
     prev_is_latin = False
     prev_is_digit = False
+    prev_is_pct = False
 
     for ch in text:
         cur_is_han = '\u4e00' <= ch <= '\u9fff' or '\u3400' <= ch <= '\u4dbf'
@@ -152,13 +153,22 @@ def _apply_script_spacing(text):
             result.append(' ')
         elif prev_is_digit and cur_is_latin:
             result.append(' ')
+        elif prev_is_han and ch == '%':
+            result.append(' ')
+        elif prev_is_pct and cur_is_han:
+            result.append(' ')
 
         result.append(ch)
         prev_is_han = cur_is_han
         prev_is_latin = cur_is_latin
         prev_is_digit = cur_is_digit
+        prev_is_pct = (ch == '%')
 
-    return ''.join(result)
+    text = ''.join(result)
+    # Re-compact alphanumeric acronyms split by spacing (P4V → P 4 V → P4V)
+    text = re.sub(r'([A-Za-z])\s+(\d)', r'\1\2', text)
+    text = re.sub(r'(\d)\s+([A-Za-z])', r'\1\2', text)
+    return text
 
 
 def apply_spacing(line):
