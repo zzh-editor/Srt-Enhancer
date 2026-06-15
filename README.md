@@ -24,14 +24,12 @@ bash scripts/setup.sh
       ▼
 ① 领域检测 (domain_scanner.py)
       │   Maya / Python / Gaming / AI-3D / Substance / General
-      │
       ▼
 ② AI 配置：语言检测 + 术语校准 + 对照表构建
       │   用户 overrides > correction-table.md > 领域联网搜索 > AI 猜测
-      │
       ▼
 ③ enhance.py 确定性流水线 (0 AI)
-   defiller → de_de → ratio_format → terminology → spacing → depunct → singleline
+   defiller → de_de → ratio_format → terminology → spacing → refine → depunct
       │
       ▼
 ④ AI 复核：书名号标记 + 置信度评分
@@ -46,12 +44,14 @@ bash scripts/setup.sh
 ## 特性
 
 - **混合 AI + 确定性脚本**：AI 负责感知（语种/领域/术语校准），脚本负责处理（零幻觉风险）
-- **7 步流水线**：去口癖 → 的/得/地 → 比率格式 → 术语校准 → 混排空格 → 去标点 → 单行化
+- **7 步流水线**：去口癖 → 的/得/地 → 比率格式 → 术语校准 → 混排空格 → **语义断句** → 去标点
+- **级联语义断句**：句末标点/转折连词/话题标记/话语标记/时间状语/OK 隔离 7 级优先级递归切割 + 短句合并
 - **对照表优先**：用户 overrides > 静态 correction-table > 领域联网搜索 > AI 上下文猜测
 - **领域自适应**：自动检测字幕领域（Maya/Python/Gaming/AI-3D/Substance/General）加载对应术语
 - **置信度评分**：每项修改标注置信度，低置信度需用户确认
 - **增量学习**：用户确认的修正持久化到 correction-table.md，跨会话复用
 - **中西文混排规范**：CJK-Latin 自动加空格、代码保护、数字单位紧凑、专名大写
+- **`--skip refine`**：上游流程（如 video-transcribe）已做语义断句时跳过，避免重复分割
 
 ## 使用
 
@@ -70,6 +70,9 @@ python3 scripts/enhance.py input.srt --steps terminology,spacing
 # 跳过指定步骤
 python3 scripts/enhance.py input.srt --skip defiller,depunct
 
+# 跳过语义断句（上游已处理时）
+python3 scripts/enhance.py input.srt --skip refine
+
 # 干跑预览
 python3 scripts/enhance.py input.srt --dry-run
 ```
@@ -83,12 +86,15 @@ python3 scripts/enhance.py input.srt --dry-run
 | 3 | `ratio_format` | `16比9` → `16:9`，`4比3` → `4:3` |
 | 4 | `terminology` | ASR→正确术语映射 + 模糊匹配 |
 | 5 | `spacing` | CJK-Latin 混排空格 |
-| 6 | `depunct` | 去标点，保护 `《》` 和代码区域 |
-| 7 | `singleline` | 多行合并，语义边界拆分 |
+| 6 | `refine` | 级联语义断句（句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离）+ 短句合并 |
+| 7 | `depunct` | 去标点，保护 `《》` 和代码区域 |
+
+> **语义断句（refine）在去标点（depunct）之前执行**，确保句末标点等切割信号可用，切割后再统一清理标点。
 
 ## 脚本
 
 - **`scripts/enhance.py`** — 主增强流水线，支持 `--config`、`--steps`、`--skip`、`--overrides`、`--dry-run`
+- **`scripts/refine_segments.py`** — 级联语义断句引擎（句末标点/转折连词/话题标记/话语标记/时间状语/OK 隔离递归切割）
 - **`scripts/apply_spacing.py`** — CJK-Latin 混排空格工具
 - **`scripts/domain_scanner.py`** — 关键词频次领域检测
 - **`scripts/title_marker.py`** — 游戏/影视作品《》书名号标记
@@ -101,6 +107,7 @@ python3 scripts/enhance.py input.srt --dry-run
 srt-enhancer/
 ├── scripts/
 │   ├── enhance.py            # 主流水线脚本
+│   ├── refine_segments.py    # 级联语义断句引擎
 │   ├── apply_spacing.py      # CJK-Latin 空格
 │   ├── domain_scanner.py     # 领域检测
 │   ├── title_marker.py       # 书名号标记
@@ -118,4 +125,4 @@ srt-enhancer/
 
 ## License
 
-MIT
+[MIT](LICENSE)

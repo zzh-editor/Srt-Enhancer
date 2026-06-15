@@ -14,10 +14,10 @@ Steps (applied in order, all optional):
   1. parse        Parse SRT into internal format
   2. defiller     Remove filler words (口癖)
   3. de_de        的/得/地 correction
-   4. terminology  ASR term replacement (from correction-table.md + overrides)
+  4. terminology  ASR term replacement (from correction-table.md + overrides)
   5. spacing      CJK-Latin spacing (calls apply_spacing.py)
-  6. depunct      Punctuation removal
-  7. singleline   Enforce single-line subtitles
+  6. refine       Semantic segment refinement (cascading split + merge)
+  7. depunct      Punctuation removal
   8. write        Write output SRT
 """
 
@@ -28,6 +28,8 @@ import os
 import re
 import sys
 from pathlib import Path
+
+from refine_segments import refine as refine_segments
 
 
 # ── Paths ──────────────────────────────────────────────────────────
@@ -438,61 +440,15 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
     return segments
 
 
-# ── Step: single-line enforcement ──────────────────────────────────
+# ── Step: semantic segment refinement ──────────────────────────────
 
-def step_singleline(segments: list[dict], config: dict) -> list[dict]:
+def step_refine(segments: list[dict], config: dict) -> list[dict]:
     max_chars = config.get("singleline_max_chars", 40)
-    out: list[dict] = []
 
     for seg in segments:
-        text = seg["text"]
-        # Merge multi-line into single line
-        text = " ".join(text.split())
-        if len(text) <= max_chars:
-            seg["text"] = text
-            out.append(seg)
-            continue
+        seg["text"] = " ".join(seg["text"].split())
 
-        # Split at semantic boundaries
-        parts = _split_at_semantic(text, max_chars)
-        dur = seg["end"] - seg["start"]
-        total_len = sum(len(p) for p in parts)
-        current_start = seg["start"]
-        for part in parts:
-            if not part.strip():
-                continue
-            ratio = len(part) / max(total_len, 1)
-            part_end = current_start + dur * ratio
-            out.append({
-                "start": current_start,
-                "end": part_end,
-                "text": part.strip(),
-            })
-            current_start = part_end
-
-    return out
-
-
-def _split_at_semantic(text: str, max_chars: int) -> list[str]:
-    if len(text) <= max_chars:
-        return [text]
-
-    # Try conjunctions first
-    conj_patterns = ["然后", "所以", "但是", "不过", "另外", "接下来", "还有",
-                     "比如说", "举个例子", "特别是", "尤其是", "或者", "还是"]
-    for conj in conj_patterns:
-        idx = text.find(conj)
-        if max_chars * 0.5 < idx < max_chars * 1.2:
-            return [text[:idx].strip(), text[idx:].strip()]
-
-    # Try last space before max_chars
-    if max_chars < len(text):
-        cut = text.rfind(" ", 0, max_chars)
-        if cut > max_chars * 0.3:
-            return [text[:cut].strip(), text[cut:].strip()]
-
-    # Fallback: hard split at max_chars
-    return [text[:max_chars].strip(), text[max_chars:].strip()]
+    return refine_segments(segments, max_chars=max_chars)
 
 
 # ── Pipeline ───────────────────────────────────────────────────────
@@ -503,8 +459,8 @@ PIPELINE_STEPS = {
     "ratio_format": step_ratio_format,
     "terminology": step_terminology,
     "spacing": step_spacing,
+    "refine": step_refine,
     "depunct": step_depunct,
-    "singleline": step_singleline,
 }
 
 
@@ -540,7 +496,7 @@ def main():
                         help="language code (zh/en/ja/ko)")
     parser.add_argument("--domain", default=None,
                         help="domain: maya/python/gaming/general ai-3d")
-    parser.add_argument("--steps", default="defiller,de_de,ratio_format,terminology,spacing,depunct,singleline",
+    parser.add_argument("--steps", default="defiller,de_de,ratio_format,terminology,spacing,refine,depunct",
                         help="comma-separated pipeline steps to run")
     parser.add_argument("--skip", default=None,
                         help="comma-separated steps to skip")

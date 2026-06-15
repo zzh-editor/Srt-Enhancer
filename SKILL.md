@@ -185,8 +185,10 @@ python3 scripts/enhance.py input.srt --steps terminology,spacing
 | 3 | `ratio_format` | Convert Chinese ratio format: `16比9` → `16:9`, `4比3` → `4:3` |
 | 4 | `terminology` | Apply ASR→correct mapping from `correction-table.md` + overrides, with fuzzy matching |
 | 5 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` |
-| 6 | `depunct` | Remove punctuation, preserve `《》` and code protection zones |
-| 7 | `singleline` | Merge multi-line, split long lines at semantic boundaries |
+| 6 | `refine` | Semantic segment refinement: cascading split (句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离) + short-fragment merge |
+| 7 | `depunct` | Remove punctuation, preserve `《》` and code protection zones |
+
+> **关于 `--skip refine`**：如果上游流程（如 video-transcribe）已在转录后执行过语义断句，调用 srt-enhancer 时可通过 `--skip refine` 跳过此步骤，避免重复分割。
 
 🔴 脚本执行报错 → 查 Failure Handling 表「enhance.py 执行失败」
 
@@ -337,8 +339,8 @@ Hybrid AI + deterministic script approach:
 6. **Ratio Format** (→ `ratio_format` step: `16比9` → `16:9`)
 7. **Typo and terminology correction** (→ `terminology` step, with `auto` fuzzy matching)
 8. **Mixed-Language Typesetting** (→ `spacing` step)
-9. **Punctuation removal** (→ `depunct` step)
-10. **Single-line enforcement** (→ `singleline` step)
+9. **Semantic segment refinement** (→ `refine` step: cascading split + merge)
+10. **Punctuation removal** (→ `depunct` step)
 
 **AI Review Phase (1-2 inference rounds):**
 11. **Title Marking** → run `scripts/title_marker.py`; AI overrides edge cases
@@ -377,7 +379,7 @@ Hybrid AI + deterministic script approach:
 
 **处理流程:**
 1. AI 检测语言(zh)、领域(Python)、联网校准 → 生成 JSON config
-2. `enhance.py --lang zh --domain python --steps defiller,de_de,terminology,spacing,depunct,singleline`
+2. `enhance.py --lang zh --domain python --steps defiller,de_de,terminology,spacing,refine,depunct`
 3. AI 复核：书名号标记 → diff 审核 → 用户确认 → 持久化术语
 
 **输出到 `input_Enhancer.srt`:** 去口癖 `嗯`/`啊` → 的得地修正 → Python 术语 → 混排 → 去标点 → 单行化
@@ -476,8 +478,8 @@ Each workflow step has an explicit failure branch. Follow this table when any st
                     (对照表 > 静态表 > 联网搜索)
                          │
                          ▼
-              enhance.py (0 AI, fully deterministic)
-   defiller → de_de → ratio_format → terminology → spacing → depunct → singleline
+               enhance.py (0 AI, fully deterministic)
+    defiller → de_de → ratio_format → terminology → spacing → refine → depunct
                          │
                          ▼
                AI Review Phase (1-2 rounds)
