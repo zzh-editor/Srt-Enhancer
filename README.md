@@ -51,7 +51,7 @@ bash scripts/setup.sh
 - **置信度评分**：每项修改标注置信度，低置信度需用户确认
 - **增量学习**：用户确认的修正持久化到 correction-table.md，跨会话复用
 - **中西文混排规范**：CJK-Latin 自动加空格、代码保护、数字单位紧凑、专名大写
-- **`--skip refine`**：上游流程（如 video-transcribe）已做语义断句时跳过，避免重复分割
+- **`--skip refine`**：上游流程（如 [video-transcribe](https://github.com/zzh-editor/video-transcribe)）已做语义断句时跳过，避免重复分割
 
 ## 使用
 
