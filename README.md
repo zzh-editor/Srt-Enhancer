@@ -11,6 +11,7 @@ npx skills@latest install https://github.com/zzh-editor/Srt-Enhancer
 # 或直接克隆
 git clone https://github.com/zzh-editor/Srt-Enhancer.git
 cd Srt-Enhancer
+bash scripts/setup.sh
 ```
 
 > 需要 Python 3.8+。
@@ -92,6 +93,7 @@ python3 scripts/enhance.py input.srt --dry-run
 - **`scripts/domain_scanner.py`** — 关键词频次领域检测
 - **`scripts/title_marker.py`** — 游戏/影视作品《》书名号标记
 - **`scripts/confidence_scorer.py`** — 置信度评分
+- **`scripts/setup.sh`** — 依赖自动安装脚本
 
 ## 文件结构
 
@@ -102,7 +104,8 @@ srt-enhancer/
 │   ├── apply_spacing.py      # CJK-Latin 空格
 │   ├── domain_scanner.py     # 领域检测
 │   ├── title_marker.py       # 书名号标记
-│   └── confidence_scorer.py  # 置信度评分
+│   ├── confidence_scorer.py  # 置信度评分
+│   └── setup.sh              # 依赖自动安装脚本
 ├── references/
 │   ├── correction-table.md   # ASR→正确术语映射
 │   ├── domains.yaml          # 领域定义（关键词 + 搜索上下文）

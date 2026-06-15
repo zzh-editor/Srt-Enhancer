@@ -64,6 +64,14 @@ Use this skill when the user mentions or uploads files related to:
 
 ## Core Workflow
 
+### 0. 环境初始化
+
+```bash
+bash scripts/setup.sh
+```
+
+确保 pyyaml 依赖就绪（用于 `domains.yaml` 解析）。
+
 ### 1. Receive File
 
 The user uploads a file (`.srt` or `.txt`) directly via the dialog:
@@ -458,6 +466,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 - **`scripts/domain_scanner.py`** - Keyword-frequency domain detection. Usage: `cat text_lines | python3 domain_scanner.py`
 - **`scripts/confidence_scorer.py`** - Deterministic confidence scoring. Provides `score(source, sub_type)` → `(value, reason)`.
 - **`scripts/title_marker.py`** - Game/media title marking with 《》。Usage: `cat text_lines | python3 title_marker.py`
+- **`scripts/setup.sh`** - Dependency auto-install script. Ensures pyyaml is available.
 
 ## Workflow Summary
 
