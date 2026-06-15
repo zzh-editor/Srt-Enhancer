@@ -1,0 +1,88 @@
+# Domain definitions for SRT enhancement
+# Each domain has keywords for detection and search_context for web calibration.
+
+domains:
+  ai-3d:
+    label: "AI 3D Generation"
+    keywords:
+      - typenow
+      - tapnow
+      - hyper3d
+      - rodin
+      - nano banana
+      - comfyui
+      - stable diffusion
+      - seedance
+      - 可灵
+      - 3d 生成
+      - ai 生图
+      - 提示词
+      - prompt
+      - 三视图
+      - 四视图
+      - text to 3d
+      - image to 3d
+    search_context: "AI 3D generation tool"
+
+  maya:
+    label: "Maya 3D Software"
+    keywords:
+      - maya
+      - hypershade
+      - polycube
+      - polymesh
+      - polygon
+      - nurbs
+      - rigging
+      - joint
+      - blend shape
+    search_context: "Maya 3D modeling software"
+
+  python:
+    label: "Python Programming"
+    keywords:
+      - python
+      - import
+      - def
+      - class
+      - pyside
+      - pyqt
+      - numpy
+      - pandas
+      - dataclass
+      - lambda
+    search_context: "Python programming language"
+
+  gaming:
+    label: "Game Art & Design"
+    keywords:
+      - rookies
+      - concept art
+      - keyframe
+      - paint over
+      - overwatch
+      - game art
+      - 虚幻
+      - unreal
+      - ue5
+      - artstation
+    search_context: "video game art competition"
+
+  substance:
+    label: "Substance Painter / Texturing"
+    keywords:
+      - substance
+      - painter
+      - designer
+      - sampler
+      - pbr
+      - 贴图
+      - texture
+      - material
+      - smart material
+    search_context: "Substance 3D texturing software"
+
+  general:
+    label: "General"
+    keywords: []
+    search_context: ""
