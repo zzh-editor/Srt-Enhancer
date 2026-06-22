@@ -16,6 +16,18 @@ bash scripts/setup.sh
 
 > 需要 Python 3.8+。
 
+### 更新
+
+```bash
+# npx 安装用户
+npx skills@latest update https://github.com/zzh-editor/Srt-Enhancer
+# 或强制重装
+npx skills@latest install https://github.com/zzh-editor/Srt-Enhancer --force
+
+# git clone 用户
+cd Srt-Enhancer && git pull origin main
+```
+
 ## Pipeline
 
 ```
