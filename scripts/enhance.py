@@ -12,13 +12,12 @@ Usage:
 
 Steps (applied in order, all optional):
   1. parse        Parse SRT into internal format
-  2. defiller     Remove filler words (口癖)
-  3. de_de        的/得/地 correction
-  4. terminology  ASR term replacement (from correction-table.md + overrides)
-  5. spacing      CJK-Latin spacing (calls apply_spacing.py)
-  6. refine       Semantic segment refinement (cascading split + merge)
-  7. depunct      Punctuation removal
-  8. write        Write output SRT
+  2. normalize    Text normalization: defiller(去口癖) → de_de(的得地) → ratio_format(16比9→16:9)
+  3. terminology  ASR term replacement (from correction-table.md + overrides)
+  4. spacing      CJK-Latin spacing (inlined, no subprocess)
+  5. refine       Semantic segment refinement (cascading split only, no merge)
+  6. finalize     depunct(去标点) → hotkeys(Ctrl+E 标准化), kept last to avoid + stripping
+  7. write        Write output SRT
 """
 
 import argparse
@@ -28,6 +27,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from apply_spacing import apply_spacing as _apply_spacing
 
 from refine_segments import refine as refine_segments
 
@@ -35,10 +35,8 @@ from refine_segments import refine as refine_segments
 # ── Paths ──────────────────────────────────────────────────────────
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = SKILL_DIR / "scripts"
 REFERENCES_DIR = SKILL_DIR / "references"
 TERMINOLOGY_PATH = REFERENCES_DIR / "correction-table.md"
-SPACING_SCRIPT = SCRIPTS_DIR / "apply_spacing.py"
 
 
 # ── Config defaults ────────────────────────────────────────────────
@@ -219,6 +217,7 @@ def step_defiller(segments: list[dict], config: dict) -> list[dict]:
 # ── Step: 的/得/地 correction ──────────────────────────────────────
 
 DE_DE_PATTERNS = [
+    # Fixed compounds (always keep 得)
     (r"\b变得", "变得"),
     (r"\b懂得", "懂得"),
     (r"\b觉得", "觉得"),
@@ -229,15 +228,47 @@ DE_DE_PATTERNS = [
     (r"\b取得", "取得"),
     (r"\b获得", "获得"),
     (r"\b认得", "认得"),
-    (r"(做|跑|画|说|长|玩|学|干|写|唱|跳|看|听|吃|喝|读|讲|演|练|飞|游|走|开|打|"
-     r"种|炒|煮|洗|擦|扫|挖|砍|切)"
-     r"\s*的\s+(很好|很棒|很快|很漂亮|要命|不行|够呛|对|不错|非常好|很棒|很快|"
-     r"很慢|很远|很近|很大|很小|很漂亮|很帅|很可爱|很聪明|很难|很容易|很复杂|很简单)",
+    # R1: V+的+比较/越来越/有点/有些/更+Adj → V+得+...
+    #   仅限常见动词（单字或双字），避免误改"具体的比较"这类形+名结构
+    (r"(["
+     r"\u7528\u505a\u8bf4\u770b\u5b66\u6559\u7ec3\u5e72"  # 用做说看学教练干
+     r"\u8dd1\u5403\u559d\u73a9\u5199\u753b\u5531\u6253"  # 跑吃喝玩写画唱打
+     r"\u8d70\u98de\u6e38\u8bfb\u8bb2\u6f14\u4f4f\u7761"  # 走飞游读讲演住睡
+     r"\u7ad9\u5750\u653e\u62ff\u7ed9\u6539\u4fee\u7ba1"  # 站坐放拿给改修管
+     r"\u7b49\u627e\u6362\u9009\u529e\u7b97\u4e70\u5356"  # 等找换选办算买卖
+     r"\u517b\u79cd\u9020\u5efa\u5f00\u5173\u505c\u641e"  # 养种建造开关停搞
+     r"\u5f04\u6574\u62c9\u63a8\u63d0\u4e3e\u80cc\u5e26"  # 弄整拉推提举背带
+     r"\u6293\u8d34\u6302\u6446\u88c5\u6309\u538b\u6d82"  # 抓贴挂摆装按压缩涂
+     r"\u64e6\u6d17\u5237\u751f\u957f\u53d1\u53d8\u6765"  # 擦洗刷生长发变来
+     r"\u53bb\u5012\u60f3\u7b54\u95ee\u8003\u8bd5\u8bc4"  # 去倒想问考试评
+     r"]{1,2})的"
+     r"(比较|越来越|有点|有些|更|更加|更为|越发|十分|极其)",
      r"\1得\2"),
-    (r"(慢慢|快快|认真|反复|自动|逐渐|不断|持续|悄悄|默默|故意|特意|拼命|使劲|"
-     r"大力|全力|陆续|相继)"
-     r"\s*的\s+(?=[\u4e00-\u9fff])",
-     r"\1地 "),
+    # R2: V+的+要命/不行/够呛/不得了/很+单字Adj → V+得+...
+    (r"(["
+     r"\u7528\u505a\u8bf4\u770b\u5b66\u6559\u7ec3\u5e72"
+     r"\u8dd1\u5403\u559d\u73a9\u5199\u753b\u5531\u6253"
+     r"\u8d70\u98de\u6e38\u8bfb\u8bb2\u6f14\u4f4f\u7761"
+     r"\u7ad9\u5750\u653e\u62ff\u7ed9\u6539\u4fee\u7ba1"
+     r"\u7b49\u627e\u6362\u9009\u529e\u7b97\u4e70\u5356"
+     r"\u517b\u79cd\u9020\u5efa\u5f00\u5173\u505c\u641e"
+     r"\u5f04\u6574\u62c9\u63a8\u63d0\u4e3e\u80cc\u5e26"
+     r"\u6293\u8d34\u6302\u6446\u88c5\u6309\u538b\u6d82"
+     r"\u64e6\u6d17\u5237\u751f\u957f\u53d1\u53d8\u6765"
+     r"\u53bb\u5012\u60f3\u7b54\u95ee\u8003\u8bd5\u8bc4"
+     r"]+)的"
+     r"(要命|不行|够呛|不得了|很[好快多慢对错早晚久长短大小高矮宽厚深浅轻重难易])",
+     r"\1得\2"),
+    # R3: 常见副词+的+去/来/做/进行/给予/予以/加以 → 地
+    (r"(更好|慢慢|快速|认真|反复|不断|持续|自动|逐渐|逐步|陆续|相继|"
+     r"悄悄|默默|故意|特意|拼命|使劲|大力|全力|狠狠|轻轻|稍稍|"
+     r"随便|随意|任意|强行|干脆|一直|不停|直接|间接|"
+     r"主动|被动|积极|消极|共同|一起|统一|单独|独立)的"
+     r"(?=去|来|做|进行|给予|予以|加以|做出|做出|开展|实施|说|讲|谈|"
+     r"写|画|看|听|用|玩|学|教|练|处理|解决|完成|安排|准备|考虑|"
+     r"讨论|研究|分析|比较|选择|决定|使用|利用|应用|回答|解释|"
+     r"介绍|说明|表达|描述|演示|操作|制作|创造|创建|开发|设计|执行)",
+     r"\1地"),
 ]
 
 
@@ -336,34 +367,14 @@ def step_terminology(segments: list[dict], config: dict) -> list[dict]:
 # ── Step: spacing ──────────────────────────────────────────────────
 
 def step_spacing(segments: list[dict], config: dict) -> list[dict]:
-    if not SPACING_SCRIPT.exists():
-        print("warning: apply_spacing.py not found, skipping spacing step",
+    try:
+        from apply_spacing import apply_spacing as _do_spacing
+    except ImportError:
+        print("warning: apply_spacing module not found, skipping spacing",
               file=sys.stderr)
         return segments
-
-    texts = [seg["text"] for seg in segments]
-    input_data = "\n".join(texts)
-
-    import subprocess
-    try:
-        proc = subprocess.run(
-            [sys.executable, str(SPACING_SCRIPT)],
-            input=input_data,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if proc.returncode == 0:
-            outputs = proc.stdout.strip().split("\n")
-            for i, seg in enumerate(segments):
-                if i < len(outputs) and outputs[i]:
-                    seg["text"] = outputs[i]
-        else:
-            print(f"warning: apply_spacing.py stderr: {proc.stderr}",
-                  file=sys.stderr)
-    except Exception as e:
-        print(f"warning: spacing subprocess failed: {e}", file=sys.stderr)
-
+    for seg in segments:
+        seg["text"] = _do_spacing(seg["text"])
     return segments
 
 
@@ -423,6 +434,16 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
         if config.get("dot_preserve", True):
             text = dot_re.sub("", text)
 
+        # Fix CJK-Latin boundaries exposed by punctuation removal
+        text = re.sub(
+            r'([\u4e00-\u9fff\u3400-\u4dbf])([A-Za-z])',
+            r'\1 \2', text
+        )
+        text = re.sub(
+            r'([A-Za-z])([\u4e00-\u9fff\u3400-\u4dbf])',
+            r'\1 \2', text
+        )
+
         # Restore protected zones
         text = text.replace("PROTECTCOLON", ":")
         text = text.replace("PROTECTDOT", ".")
@@ -440,27 +461,77 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
     return segments
 
 
+# ── Step: hotkey normalization ──────────────────────────────────────
+
+HOTKEY_PATTERNS = [
+    (r'\b[Cc]trl[\s+\-]?[Ee]\b', 'Ctrl+E'),
+    (r'\b[Cc]trl[\s+\-]?[Cc]\b', 'Ctrl+C'),
+    (r'\b[Cc]trl[\s+\-]?[Vv]\b', 'Ctrl+V'),
+    (r'\b[Cc]trl[\s+\-]?[Zz]\b', 'Ctrl+Z'),
+    (r'\b[Cc]trl[\s+\-]?[Ss]\b', 'Ctrl+S'),
+    (r'\b[Cc]trl[\s+\-]?[Dd]\b', 'Ctrl+D'),
+    (r'\b[Cc]ontrol\s*[Dd]\b', 'Ctrl+D'),
+    (r'\b[Cc]ommand[\s+\-]?[Zz]\b', 'Command+Z'),
+    (r'\b[Cc]ommand[\s+\-]?[Cc]\b', 'Command+C'),
+    (r'\b[Cc]ommand[\s+\-]?[Vv]\b', 'Command+V'),
+    (r'\b[Cc]ommand[\s+\-]?[Ss]\b', 'Command+S'),
+]
+
+
+def step_hotkeys(segments: list[dict], config: dict) -> list[dict]:
+    for seg in segments:
+        text = seg["text"]
+        for pattern, replacement in HOTKEY_PATTERNS:
+            text = re.sub(pattern, replacement, text)
+        seg["text"] = text
+    return segments
+
+
 # ── Step: semantic segment refinement ──────────────────────────────
 
 def step_refine(segments: list[dict], config: dict) -> list[dict]:
-    max_chars = config.get("singleline_max_chars", 40)
-
     for seg in segments:
         seg["text"] = " ".join(seg["text"].split())
 
-    return refine_segments(segments, max_chars=max_chars)
+    return refine_segments(segments)
 
 
 # ── Pipeline ───────────────────────────────────────────────────────
 
+# Forward-compat: the old 8-step names still work via --steps
+# Merged under the hood into 5 efficient steps:
+#   normalize   = defiller → de_de → ratio_format
+#   terminology = terminology (unchanged)
+#   spacing     = spacing (inlined, no subprocess)
+#   refine      = refine (unchanged)
+#   finalize    = depunct → hotkeys
+
+def step_normalize(segments: list[dict], config: dict) -> list[dict]:
+    segments = step_defiller(segments, config)
+    segments = step_de_de(segments, config)
+    segments = step_ratio_format(segments, config)
+    return segments
+
+
+def step_finalize(segments: list[dict], config: dict) -> list[dict]:
+    segments = step_depunct(segments, config)
+    segments = step_hotkeys(segments, config)
+    return segments
+
+
 PIPELINE_STEPS = {
-    "defiller": step_defiller,
-    "de_de": step_de_de,
-    "ratio_format": step_ratio_format,
+    # Merged steps (preferred — default pipeline)
+    "normalize": step_normalize,
     "terminology": step_terminology,
     "spacing": step_spacing,
     "refine": step_refine,
+    "finalize": step_finalize,
+    # Individual legacy names (backward compat via --steps/--skip)
+    "defiller": step_defiller,
+    "de_de": step_de_de,
+    "ratio_format": step_ratio_format,
     "depunct": step_depunct,
+    "hotkeys": step_hotkeys,
 }
 
 
@@ -496,7 +567,7 @@ def main():
                         help="language code (zh/en/ja/ko)")
     parser.add_argument("--domain", default=None,
                         help="domain: maya/python/gaming/general ai-3d")
-    parser.add_argument("--steps", default="defiller,de_de,ratio_format,terminology,spacing,refine,depunct",
+    parser.add_argument("--steps", default="normalize,terminology,spacing,refine,finalize",
                         help="comma-separated pipeline steps to run")
     parser.add_argument("--skip", default=None,
                         help="comma-separated steps to skip")

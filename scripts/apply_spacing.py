@@ -28,6 +28,7 @@ PROTECTION_PATTERNS = [
     (re.compile(r'https?://[^\s,;:!?）)"\']+'), '__URL__'),
     (re.compile(r'/[^\s,;:!?）)"\']+(?=[\s,;:!?）)"\']|$)'), '__PATH__'),
     (re.compile(r'[A-Za-z]:\\[^\s,;:!?）)"\']+'), '__WPATH__'),
+    (re.compile(r'(?<![A-Za-z0-9_])[pP](?:Cube|Sphere|Cylinder|Cone|Torus|Plane|Prism|Pipe)\d+(?![A-Za-z0-9_])'), '__MAYA_OBJ__'),
 ]
 
 # -- Units that stay compact with preceding digits --
@@ -165,9 +166,6 @@ def _apply_script_spacing(text):
         prev_is_pct = (ch == '%')
 
     text = ''.join(result)
-    # Re-compact alphanumeric acronyms split by spacing (P4V → P 4 V → P4V)
-    text = re.sub(r'([A-Za-z])\s+(\d)', r'\1\2', text)
-    text = re.sub(r'(\d)\s+([A-Za-z])', r'\1\2', text)
     return text
 
 
@@ -178,6 +176,9 @@ def apply_spacing(line):
     text = _apply_capitalization(text)
     text = _apply_script_spacing(text)
     text = _apply_number_unit_compact(text)
+    # Re-compact known digit-letter/letter-digit compounds: 2 D → 2D, U E 5 → UE5
+    text = re.sub(r'(\d+)\s+([A-Z][a-z]{0,2})\b', r'\1\2', text)
+    text = re.sub(r'\b([A-Z][a-z]?[A-Z]?)\s+(\d+)', r'\1\2', text)
     text = _restore(text, mapping)
     return text
 

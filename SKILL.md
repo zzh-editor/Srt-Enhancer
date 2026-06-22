@@ -52,7 +52,7 @@ Use this skill when the user mentions or uploads files related to:
     - AI 上下文猜测 → 最低优先，标注 ❗
  5. **Hybrid AI + Script Execution**:
     - AI handles: language detection, web calibration (fallback), config preparation, result review
-    - **`scripts/enhance.py`** handles: deterministic pipeline execution (defiller → de_de → ratio_format → terminology → spacing → depunct → singleline)
+    - **`scripts/enhance.py`** handles: deterministic pipeline execution (normalize → terminology → spacing → refine → finalize)
     - **`scripts/domain_scanner.py`** handles: domain detection (keyword scoring)
     - **`scripts/title_marker.py`** handles: game/media title marking
     - **`scripts/confidence_scorer.py`** handles: confidence scoring
@@ -143,11 +143,21 @@ AI reads the input file, detects language, collects domain from `domain_scanner.
 **AI tasks at this stage:**
 - **Language detection**: determine primary language from content
 - **Web calibration**: search for low-confidence terms NOT in any correction table
-  - Use domain's `search_context` to focus queries (e.g., `AI 3D generation tool Rodin`)
+  - Query format: `"{term}" + "{search_context}"` (e.g., `"Rodin" "AI 3D generation tool"`)
+  - Top-1 result → extract authoritative spelling; if 0 results → mark low-confidence
+  - Each web search yields at most 3 correction candidates
   - Add verified corrections to `terminology_overrides`
 - **Config generation**: produce the JSON config that will drive `scripts/enhance.py`
 
 This is the **only** heavy AI processing round in the pipeline.
+
+**🔴 CHECKPOINT · 🛑 STOP：** 执行 enhance.py 前将生成的 JSON config 展示给用户确认。确认项：
+- `lang` 是否正确
+- `domain` 是否与实际内容匹配
+- `terminology_overrides` 中是否有误匹配
+- 是否要跳过 refine（如上游已断句）
+
+用户确认后再进入下一步。
 
 ### 4. Execute scripts/enhance.py
 
@@ -180,13 +190,13 @@ python3 scripts/enhance.py input.srt --steps terminology,spacing
 
 | Step | CLI name | What it does |
 |------|----------|-------------|
-| 1 | `defiller` | Remove filler words (啊/哦/嗯/呃 etc.), preserve discourse markers |
-| 2 | `de_de` | Correct 的/得/地 based on fixed patterns and syntax rules |
-| 3 | `ratio_format` | Convert Chinese ratio format: `16比9` → `16:9`, `4比3` → `4:3` |
-| 4 | `terminology` | Apply ASR→correct mapping from `correction-table.md` + overrides, with fuzzy matching |
-| 5 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` |
-| 6 | `refine` | Semantic segment refinement: cascading split (句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离) + short-fragment merge |
-| 7 | `depunct` | Remove punctuation, preserve `《》` and code protection zones |
+| 1 | `normalize` | Combined: defiller(去掉口癖) → de_de(的得地修正) → ratio_format(16比9 → 16:9) |
+| 2 | `terminology` | Apply ASR→correct mapping from `correction-table.md` + overrides, with fuzzy matching |
+| 3 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` (inlined, no subprocess overhead) |
+| 4 | `refine` | Semantic segment refinement: cascading split (句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离) |
+| 5 | `finalize` | Combined: depunct(去标点, 保留`《》`和代码保护域) → hotkeys(标准化Ctrl+E等快捷键, 最后执行避免+被剥离) |
+
+> **旧版 --steps 向后兼容：** `defiller,de_de,ratio_format,depunct,hotkeys` 等单步名称仍然可用。但推荐使用合并后的 5 步名称 (`normalize`, `finalize`) 获得更好性能。
 
 > **关于 `--skip refine`**：如果上游流程（如 video-transcribe）已在转录后执行过语义断句，调用 srt-enhancer 时可通过 `--skip refine` 跳过此步骤，避免重复分割。
 
@@ -208,7 +218,9 @@ AI overrides any remaining edge cases (titles not in the known list).
 
 **b. Web-based ASR calibration (remaining unmatched terms only):**
 - Scan output for terms NOT matched by any correction table
-- Use domain's `search_context` for focused queries
+- For each unmatched term: query `"{term}" + "{search_context}"`, inspect top 2 results
+- If authoritative source found → add to overrides with confidence ≥ 90%
+- If 0 authoritative results → skip, mark as ❗ in diff
 - **对照表已匹配的术语直接跳过，不联网搜索**
 
 **c. Confidence Scoring:**
@@ -324,29 +336,12 @@ When encountering a potentially incorrect term:
 
 ## Implementation Guidelines
 
-### Enhancement Order
+### Enhancement Checklist
 
-Hybrid AI + deterministic script approach:
-
-**AI Phase (2-3 inference rounds):**
-1. **Auto Domain Detection** → run `scripts/domain_scanner.py` (AI overrides if needed)
-2. **AI Config Prep**: Build JSON config — collect `terminology_overrides` (table-unmatched terms only), set `match_mode: auto`
-3. **Execute enhance.py** (single command, deterministic pipeline)
-
-**enhance.py Pipeline (zero AI, fully deterministic):**
-4. **Filler word removal** (→ `defiller` step)
-5. **的/得/地 Correction** (→ `de_de` step)
-6. **Ratio Format** (→ `ratio_format` step: `16比9` → `16:9`)
-7. **Typo and terminology correction** (→ `terminology` step, with `auto` fuzzy matching)
-8. **Mixed-Language Typesetting** (→ `spacing` step)
-9. **Semantic segment refinement** (→ `refine` step: cascading split + merge)
-10. **Punctuation removal** (→ `depunct` step)
-
-**AI Review Phase (1-2 inference rounds):**
-11. **Title Marking** → run `scripts/title_marker.py`; AI overrides edge cases
-12. **Confidence Scoring** → run `scripts/confidence_scorer.py` reference
-13. **Diff Output + User Review** → present diff table, collect confirmation
-14. **Output + Persistence** → `{源文件名}_Enhancer.srt`, append to `correction-table.md`
+1. **AI Phase** (§3 Core Workflow) → detect domain → prepare config → 🔴 CHECKPOINT → execute enhance.py
+2. **enhance.py** (§4) → `normalize → terminology → spacing → refine → finalize` (zero AI)
+3. **AI Review** (§5-6) → title_marker.py → confidence_scorer.py → diff table → user confirm
+4. **Output** (§7) → write file → persist corrections to `correction-table.md`
 
 ### Quality Checks
 
@@ -379,10 +374,10 @@ Hybrid AI + deterministic script approach:
 
 **处理流程:**
 1. AI 检测语言(zh)、领域(Python)、联网校准 → 生成 JSON config
-2. `enhance.py --lang zh --domain python --steps defiller,de_de,terminology,spacing,refine,depunct`
+2. `enhance.py --lang zh --domain python --steps normalize,terminology,spacing,refine,finalize`
 3. AI 复核：书名号标记 → diff 审核 → 用户确认 → 持久化术语
 
-**输出到 `input_Enhancer.srt`:** 去口癖 `嗯`/`啊` → 的得地修正 → Python 术语 → 混排 → 去标点 → 单行化
+**输出到 `input_Enhancer.srt`:** 去口癖 `嗯`/`啊` → 的得地修正 + 比例格式 → Python 术语 → 混排 → 断句 → 去标点 → 快捷键标准化
 
 See `references/example.md` for a complete worked example (input → processing steps → diff table → output).
 
@@ -403,7 +398,7 @@ See `references/example.md` for a complete worked example (input → processing 
 ### Must DO:
 - **对照表优先原则**：用户 overrides > correction-table.md > 领域感知联网搜索 > AI 上下文猜测
 - **Use AI for**: language detection, web calibration (table-unmatched only), config building, result review
-- **Use `scripts/enhance.py` for**: deterministic pipeline (defiller, de_de, ratio_format, terminology, spacing, depunct, singleline)
+- **Use `scripts/enhance.py` for**: deterministic pipeline (normalize, terminology, spacing, refine, finalize)
 - **Use `scripts/domain_scanner.py` for**: domain detection (keyword scoring)
 - **Use `scripts/title_marker.py` for**: known game/film title marking
 - **Use `scripts/confidence_scorer.py` for**: deterministic confidence scoring
@@ -463,7 +458,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 - **`references/mixed-typesetting.md`** - Complete specification for mixed-language typesetting
 
 ### Scripts
-- **`scripts/enhance.py`** - **Main enhancement pipeline.** Deterministic pipeline: defiller → de_de → ratio_format → terminology → spacing → depunct → singleline. Supports `--config`, `--steps`, `--skip`, `--overrides`, `--dry-run`, `--match-mode`.
+- **`scripts/enhance.py`** - **Main enhancement pipeline.** Deterministic pipeline: normalize(去口癖+的得地+比例格式) → terminology → spacing → refine → finalize(去标点+快捷键). Supports `--config`, `--steps`, `--skip`, `--overrides`, `--dry-run`, `--match-mode`.
 - **`scripts/apply_spacing.py`** - Deterministic CJK-Latin spacing tool. Called by enhance.py.
 - **`scripts/domain_scanner.py`** - Keyword-frequency domain detection. Usage: `cat text_lines | python3 domain_scanner.py`
 - **`scripts/confidence_scorer.py`** - Deterministic confidence scoring. Provides `score(source, sub_type)` → `(value, reason)`.
@@ -479,7 +474,8 @@ Each workflow step has an explicit failure branch. Follow this table when any st
                          │
                          ▼
                enhance.py (0 AI, fully deterministic)
-    defiller → de_de → ratio_format → terminology → spacing → refine → depunct
+    normalize → terminology → spacing → refine → finalize
+    └ defiller+de_de+ratio_format         └ depunct+hotkeys
                          │
                          ▼
                AI Review Phase (1-2 rounds)

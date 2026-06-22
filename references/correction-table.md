@@ -292,3 +292,36 @@
 | force（上传 context） | Perforce | 用户确认修正 |
 | 建我自己存在的 | 存在我自己 | 用户确认修正 |
 | 亲眼的 | 亲眼 | 亲眼看到；用户确认修正 |
+| TypeNode | TapNow | AI 生图工具；用户确认修正 |
+| 防射霜 | 防晒霜 | UV 类比用语；用户确认修正 |
+| 钢箔 | 高模 | 高面数模型；用户确认修正 |
+| 法形贴图 | 法线贴图 | 用户确认修正 |
+| 一万司机 / 一万停电 | 死机 / 停电 | 电脑崩溃；用户确认修正 |
+| 拍屏 / 拍平 | 展平 | UV 展开操作；用户确认修正 |
+| 原著体 | 圆柱体 | 基本几何体；用户确认修正 |
+| 起初 | 挤出 | extrude 操作；用户确认修正 |
+| 解面 | 减面 | 减少面数；用户确认修正 |
+| 金格 | 晶格 | Lattice 变形器；用户确认修正 |
+| 带功耗组 | 光滑组 | Smoothing Group；用户确认修正 |
+| 光折 / 光学 | 光照 | lighting；用户确认修正 |
+| 烘培 | 烘焙 | baking；用户确认修正 |
+| 散热面 | 三角面 | triangle face；用户确认修正 |
+| 反线 / 法性 | 法线 | normal 方向；用户确认修正 |
+| Hyper3D Routing / Hyper3D loading | Hyper3D Rodin | AI 3D 生成工具；用户确认修正 |
+| 蚂蚁2026 | Maya 2026 | 3D 软件；用户确认修正 |
+| CLS | 该 | 应当；用户确认修正 |
+| outline | Outliner | Maya 大纲面板；用户确认修正 |
+| p cube 1 | pCube1 | Maya 多边形立方体命名；用户确认修正 |
+| p cube1 | pCube1 | Maya 多边形立方体命名；用户确认修正 |
+| 式口 | 视口 | viewport；用户确认修正 |
+| 试口 | 视口 | viewport；用户确认修正 |
+| ctrle | Ctrl+E | 快捷键；用户确认修正 |
+| ctrl+e | Ctrl+E | 快捷键；用户确认修正 |
+| ctrl e | Ctrl+E | 快捷键；用户确认修正 |
+| ctrl+c | Ctrl+C | 快捷键；用户确认修正 |
+| ctrl c | Ctrl+C | 快捷键；用户确认修正 |
+| ctrl+v | Ctrl+V | 快捷键；用户确认修正 |
+| ctrl v | Ctrl+V | 快捷键；用户确认修正 |
+| controld | Ctrl+D | 快捷键；用户确认修正 |
+| 玛雅 | Maya | ASR 校准；用户确认修正 |
+| 虚幻无影前 | 虚幻5引擎 | UE5 Unreal Engine 5；用户确认修正 |

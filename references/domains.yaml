@@ -36,6 +36,19 @@ domains:
       - rigging
       - joint
       - blend shape
+      - 挤出
+      - 平滑
+      - 展平
+      - 法线
+      - 减面
+      - 三角面
+      - 光滑组
+      - 晶格
+      - 视口
+      - 高模
+      - 低模
+      - 拓扑
+      - uv
     search_context: "Maya 3D modeling software"
 
   python:

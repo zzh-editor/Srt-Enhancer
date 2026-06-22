@@ -5,7 +5,8 @@ Refine SRT segments using multi-level cascading semantic split rules.
 Pipeline:
   1. For each segment, find candidate split positions across 6 confidence levels
   2. Recursively split at balanced positions, proportionally allocate time
-  3. Merge back very short fragments (< 3 chars) unless protected response words
+
+No punctuation dependency — split purely on semantic/contextual cues.
 
 Usage:
     python3 scripts/refine_segments.py <input.srt> [output.srt]
@@ -16,32 +17,34 @@ import re
 import sys
 from pathlib import Path
 
-# ── Constants ────────────────────────────────────────────────────────
 
-SENTENCE_END_PUNCT = frozenset(".?!。？！…")
+# ── Constants ────────────────────────────────────────────────────────
 
 STRONG_CONJUNCTIONS = [
     "但是", "但", "所以", "不过", "然而", "可是", "因此", "因而",
+    "而且", "并且", "那如果", "那这样", "那就",
 ]
 
 DISCOURSE_MARKERS = [
     "首先", "其次", "然后", "接着",
     "另外", "还有", "此外", "同样",
     "比如说", "举个例子", "比方说",
+    "说白了", "也就是说", "所以说", "就是说",
+    "那首先",
+    "可以这么说", "换句话说", "反过来说",
+    "总的来说", "具体来说", "严格来说",
+    "简单来说", "一般来讲", "换句话说",
 ]
 
 TEMP_MARKERS = [
-    "等你", "等到", "当你", "到时候", "有时候", "接下来",
+    "到时候", "有时候", "接下来",
+    "那接下来", "那现在", "现在我们来",
+    "我们一起来", "我们现在",
 ]
 
-TIME_WORDS = ["今天", "现在", "目前"]
-
-TOPIC_NA_BLOCK_PREFIX = frozenset(
-    "是有的了在和跟与到从把被让给为对向于"
-)
-
-TOPIC_NA_BLOCK_SUFFIX = frozenset(
-    "个些种时天年月点次级位名里边儿本条张"
+TOPIC_SHIFT_FOLLOW = frozenset(
+    "我们大家你们他们这个这些现在今天首先"
+    "第二第三接下来到时候如果"
 )
 
 PROTECTED_WORDS = frozenset({
@@ -52,6 +55,23 @@ PROTECTED_WORDS = frozenset({
     "ok", "okay", "okay", "yes", "no", "right", "sure", "yeah", "yep",
     "nope", "nah", "alright", "indeed",
 })
+
+SPLIT_BEFORE_TAGS = [
+    "是吧", "对吧", "好吧", "没问题", "没错",
+    "是的", "对啊", "对哦", "好啦", "行了",
+    "可以啊", "就这样", "就是这样",
+    "它是", "这是一个",
+]
+
+RESPONSE_TOPIC_PATTERNS = [
+    (re.compile(r"好那"), 2),
+    (re.compile(r"好现在"), 1),
+    (re.compile(r"好那我们"), 2),
+    (re.compile(r"好我们"), 1),
+    (re.compile(r"好接下来"), 1),
+    (re.compile(r"对那"), 2),
+    (re.compile(r"行那"), 2),
+]
 
 
 # ── SRT I/O ─────────────────────────────────────────────────────────
@@ -95,6 +115,7 @@ def parse_srt(path: str) -> list[dict]:
                     "end": end,
                     "text": text,
                 })
+            i += 1
         else:
             i += 1
     return segments
@@ -129,44 +150,41 @@ def _is_protected(text: str) -> bool:
     return _strip_punct(text) in PROTECTED_WORDS
 
 
-def _has_sentence_end(text: str) -> bool:
-    return any(c in SENTENCE_END_PUNCT for c in text[-3:])
-
-
 # ── Split point detection ───────────────────────────────────────────
 
+def _is_split_viable(text: str, pos: int) -> bool:
+    if pos < 1 or pos >= len(text) - 1:
+        return False
+    right_start = text[pos]
+    if right_start.isascii() and (right_start.isalpha() or right_start.isdigit()):
+        return False
+    return True
+
+
 def _is_topic_shift_na(text: str, pos: int) -> bool:
-    """Check if \\u90a3 (那) at pos is a topic shift (not a determiner)."""
-    if pos <= 0 or pos >= len(text) - 1:
+    if pos + 1 >= len(text):
         return False
-
-    if pos > 0 and text[pos - 1] in TOPIC_NA_BLOCK_PREFIX:
-        return False
-
-    if pos >= 2:
-        prev2 = text[pos - 2:pos]
-        if prev2 in ("就是", "这是", "那是", "可是", "而是", "但是", "还是", "或是"):
-            return False
-
-    nxt = text[pos + 1] if pos + 1 < len(text) else ""
-    if nxt in TOPIC_NA_BLOCK_SUFFIX:
-        return False
+    if pos > 0 and text[pos - 1] == "好":
+        return True
+    nxt = text[pos + 1]
+    if nxt in TOPIC_SHIFT_FOLLOW:
+        return True
     nxt2 = text[pos + 1:pos + 3]
     if nxt2 in ("就是", "还是", "也是", "算是", "的话", "这么", "那么"):
         return False
-
-    return True
-
-
-def _is_split_viable(text: str, pos: int) -> bool:
-    if pos < 2 or pos >= len(text) - 2:
-        return False
-    if text[pos - 1] in SENTENCE_END_PUNCT:
-        return False
-    return True
+    return nxt in "，"
 
 
-
+def _find_response_topic_splits(text: str) -> list[int]:
+    splits = []
+    for pattern, split_offset in RESPONSE_TOPIC_PATTERNS:
+        m = pattern.search(text)
+        while m:
+            p = m.start() + split_offset
+            if _is_split_viable(text, p):
+                splits.append(p)
+            m = pattern.search(text, m.start() + 1)
+    return splits
 
 
 def _find_split_points(text: str) -> tuple[list[int], list[int]]:
@@ -179,15 +197,7 @@ def _find_split_points(text: str) -> tuple[list[int], list[int]]:
 
     n = len(text)
 
-    # Level 1: Sentence-ending punctuation (STRONG)
-    for i, c in enumerate(text):
-        if c in SENTENCE_END_PUNCT:
-            p = i + 1
-            if p < n:
-                strong.add(p)
-                all_pts.add(p)
-
-    # Level 2: Strong conjunctions mid-text (STRONG)
+    # Level 1: Strong conjunctions mid-text (STRONG)
     for conj in STRONG_CONJUNCTIONS:
         idx = text.find(conj, 1)
         while idx > 0:
@@ -196,7 +206,7 @@ def _find_split_points(text: str) -> tuple[list[int], list[int]]:
                 all_pts.add(idx)
             idx = text.find(conj, idx + 1)
 
-    # Level 3: Topic shift 那 (STRONG, with context check)
+    # Level 2: Topic shift 那 (STRONG)
     idx = text.find("那", 1)
     while idx > 0:
         if _is_split_viable(text, idx) and _is_topic_shift_na(text, idx):
@@ -204,16 +214,17 @@ def _find_split_points(text: str) -> tuple[list[int], list[int]]:
             all_pts.add(idx)
         idx = text.find("那", idx + 1)
 
-    # Level 4: Discourse markers (STRONG)
+    # Level 3: Discourse markers (STRONG) — skip position 0 to avoid standalone 首先/然后
     for marker in DISCOURSE_MARKERS:
         idx = text.find(marker, 1)
-        while idx > 0:
-            if _is_split_viable(text, idx):
-                strong.add(idx)
-                all_pts.add(idx)
+        while idx >= 0:
+            split_pos = idx + len(marker)
+            if split_pos < n - 1 and _is_split_viable(text, split_pos):
+                strong.add(split_pos)
+                all_pts.add(split_pos)
             idx = text.find(marker, idx + 1)
 
-    # Level 5: Temporal markers (STRONG)
+    # Level 4: Temporal markers (STRONG)
     for marker in TEMP_MARKERS:
         idx = text.find(marker, 1)
         while idx > 0:
@@ -222,29 +233,52 @@ def _find_split_points(text: str) -> tuple[list[int], list[int]]:
                 all_pts.add(idx)
             idx = text.find(marker, idx + 1)
 
-    # Level 6: Time words mid-text (MEDIUM)
-    for marker in TIME_WORDS:
-        idx = text.find(marker, 1)
-        while idx > 0:
-            if _is_split_viable(text, idx):
-                all_pts.add(idx)
-            idx = text.find(marker, idx + 1)
+    # Level 5: Response + topic patterns (STRONG)
+    for p in _find_response_topic_splits(text):
+        strong.add(p)
+        all_pts.add(p)
 
-    # Level 7: OK isolation (MEDIUM)
+    # Level 6: OK isolation (MEDIUM)
     for ok_word in ("OK", "ok", "Okay", "Ok"):
         idx = text.find(ok_word)
         while idx >= 0:
             ok_end = idx + len(ok_word)
-            right = text[ok_end:ok_end + 1]
-            if ok_end <= n and (ok_end >= n or right in "，。？！\n "):
+            ok_end_char = text[ok_end] if ok_end < n else " "
+            if ok_end <= n and (ok_end >= n or ok_end_char in "，。？！\n "):
                 if ok_end < n:
                     all_pts.add(ok_end)
                 elif idx > 2:
                     all_pts.add(idx)
             idx = text.find(ok_word, idx + 1)
 
-    min_left = 2
-    min_right = 2  # allow short right chunks (protected words like OK)
+    # Level 7: Split BEFORE response tags (MEDIUM)
+    for tag in SPLIT_BEFORE_TAGS:
+        idx = text.find(tag, 1)
+        while idx > 0:
+            if _is_split_viable(text, idx):
+                all_pts.add(idx)
+            idx = text.find(tag, idx + 1)
+
+    # Level 8: Repetition — leading CJK sequence repeats later in text (MEDIUM)
+    # Extract leading 2-3 CJK characters (ignore spaces/Latin/digits)
+    leading_cjk = ""
+    for ch in text:
+        if not ch.isascii():
+            leading_cjk += ch
+            if len(leading_cjk) >= 2:
+                break
+    if len(leading_cjk) >= 2:
+        cjk_positions = [(i, ch) for i, ch in enumerate(text) if not ch.isascii()]
+        cjk_only = "".join(ch for _, ch in cjk_positions)
+        if len(cjk_only) >= len(leading_cjk):
+            second = cjk_only.find(leading_cjk, len(leading_cjk))
+            if second > 0 and second < len(cjk_positions):
+                orig_pos = cjk_positions[second][0]
+                if _is_split_viable(text, orig_pos):
+                    all_pts.add(orig_pos)
+
+    min_left = 1
+    min_right = 2
     strong_sorted = sorted(p for p in strong if min_left <= p <= n - min_right)
     all_sorted = sorted(p for p in all_pts if min_left <= p <= n - min_right)
 
@@ -253,8 +287,18 @@ def _find_split_points(text: str) -> tuple[list[int], list[int]]:
 
 # ── Recursive splitting ─────────────────────────────────────────────
 
-def _split_recursive(seg: dict, max_chars: int) -> list[dict]:
-    """Recursively split segment at the best balanced split point."""
+def _score_split(text: str, pos: int, text_len: int) -> float:
+    """Score a split position — lower is better."""
+    ratio = pos / text_len if text_len > 0 else 0.5
+    if ratio < 0.3:
+        return 0.3 - ratio
+    elif ratio > 0.7:
+        return ratio - 0.7
+    return 0
+
+
+def _split_recursive(seg: dict) -> list[dict]:
+    """Recursively split segment at semantic split points."""
     text = seg["text"].strip()
     if not text:
         return [seg]
@@ -262,16 +306,7 @@ def _split_recursive(seg: dict, max_chars: int) -> list[dict]:
     text_len = len(text)
     strong_pts, all_pts = _find_split_points(text)
 
-    should_split = False
-    if text_len >= max_chars and all_pts:
-        should_split = True
-    elif text_len < max_chars and strong_pts:
-        should_split = True
-
-    if not should_split:
-        return [seg]
-
-    candidates = list(strong_pts) if text_len < max_chars else list(all_pts)
+    candidates = list(strong_pts) if strong_pts else list(all_pts)
     if not candidates:
         return [seg]
 
@@ -279,7 +314,7 @@ def _split_recursive(seg: dict, max_chars: int) -> list[dict]:
     for p in candidates:
         right_text = text[p:].strip()
         left_text = text[:p].strip()
-        left_ok = len(left_text) >= 2
+        left_ok = len(left_text) >= 3 or _is_protected(left_text)
         right_ok = len(right_text) >= 3 or _is_protected(right_text)
         if left_ok and right_ok:
             viable.append(p)
@@ -287,8 +322,7 @@ def _split_recursive(seg: dict, max_chars: int) -> list[dict]:
     if not viable:
         return [seg]
 
-    mid = text_len // 2
-    best = min(viable, key=lambda p: abs(p - mid))
+    best = min(viable, key=lambda p: _score_split(text, p, text_len))
 
     left_text = text[:best].strip()
     right_text = text[best:].strip()
@@ -303,45 +337,23 @@ def _split_recursive(seg: dict, max_chars: int) -> list[dict]:
     right_seg = {"text": right_text, "start": split_time, "end": seg["end"]}
 
     result = []
-    result.extend(_split_recursive(left_seg, max_chars))
-    result.extend(_split_recursive(right_seg, max_chars))
-    return result
-
-
-# ── Merging ──────────────────────────────────────────────────────────
-
-def _merge_short_fragments(segments: list[dict]) -> list[dict]:
-    """Merge very short fragments into the previous segment."""
-    if not segments:
-        return []
-
-    result = [segments[0]]
-    for seg in segments[1:]:
-        text = seg["text"].strip()
-        prev = result[-1]
-
-        if len(text) <= 3 and not _is_protected(text):
-            sep = "" if text[0] in "，、。？！" else ""
-            prev["text"] = prev["text"].rstrip("，、；：") + sep + text
-            prev["end"] = seg["end"]
-        else:
-            result.append(seg)
-
+    result.extend(_split_recursive(left_seg))
+    result.extend(_split_recursive(right_seg))
     return result
 
 
 # ── Main refine pipeline ────────────────────────────────────────────
 
-def refine(segments: list[dict], max_chars: int = 30) -> list[dict]:
+def refine(segments: list[dict]) -> list[dict]:
     if not segments:
         return []
 
     split_segs = []
     for seg in segments:
-        sub = _split_recursive(seg, max_chars)
+        sub = _split_recursive(seg)
         split_segs.extend(sub)
 
-    return _merge_short_fragments(split_segs)
+    return split_segs
 
 
 # ── CLI ─────────────────────────────────────────────────────────────
@@ -351,8 +363,8 @@ def main():
         description="Refine SRT segments using content-based semantic analysis"
     )
     parser.add_argument("input", help="input SRT file path")
-    parser.add_argument("output", nargs="?", help="output SRT file path (default: overwrite input)")
-    parser.add_argument("--max-chars", type=int, default=30, help="max chars per subtitle block")
+    parser.add_argument("output", nargs="?",
+                        help="output SRT file path (default: overwrite input)")
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -365,10 +377,13 @@ def main():
         print(f"error: no valid segments in {input_path}", file=sys.stderr)
         sys.exit(1)
 
-    out = refine(segs, max_chars=args.max_chars)
+    out = refine(segs)
     output_path = args.output or str(input_path)
     write_srt(out, output_path)
-    print(f"refined {len(segs)} \u2192 {len(out)} segments \u2192 {output_path}", file=sys.stderr)
+    print(
+        f"refined {len(segs)} → {len(out)} segments → {output_path}",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":
