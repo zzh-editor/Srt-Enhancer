@@ -4,7 +4,7 @@
 
 ## 触发词
 
-在支持 Agent Skills 的 CLI（OpenCode、Claude Code、Cursor 等）中，说以下任意一句即可自动调用：
+在支持 Agent Skills 的 CLI（OpenCode、Claude Code、Cursor 等）中，说以下任意一句 + 字幕文件路径即可自动调用：
 
 ```
 优化字幕 / 增强字幕
@@ -15,12 +15,6 @@ clean up ASR transcript / filler removal
 
 输入后 Agent 会自动：检测字幕领域 → 加载对应术语表 → 执行 5 步流水线 → 生成 diff 审核表 → 用户确认后输出。
 
-### 手动指定领域
-
-```
-帮我优化这个 Maya 教程的字幕
-处理这段 Python 字幕，去掉口癖
-这是一段游戏字幕，clean up ASR 错误
 ```
 
 ## 安装
