@@ -72,7 +72,7 @@ AI 审查: 书名号标记 → diff 审核表 → 用户确认 → 写入输出
 | ASR 术语校准 | correction-table.md + 用户 overrides，三级模糊匹配 |
 | 领域自适应 | Maya(18关键词)/Python/Gaming/AI-3D/Substance/General |
 | 中西文混排 | CJK-Latin 自动空格、数字-字母再紧凑(2D/3D/4K/UV)、代码保护 |
-| 语义断句 | 8 级递归切割：句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离/响应标记/重复检测 |
+| 语义断句(v2) | 预清洗(去空/零时长/重复) → 8 级切割(强连词/话题/话语/时间/回应模式/OK隔离/回应标签/重复检测) + 教学口语标记(然后/之后/我们来) + 动态最小字数防过度碎切 |
 | 快捷键 | Ctrl+E/Ctrl+C/Ctrl+V 标准化，最后执行避免 + 被剥离 |
 | 置信度评分 | 每项修改标注置信度，低置信度需用户确认 |
 | 增量学习 | 用户确认的修正持久化到 correction-table.md |
@@ -84,7 +84,7 @@ AI 审查: 书名号标记 → diff 审核表 → 用户确认 → 写入输出
 | 1 | `normalize` | 文本规范化 | defiller(去口癖) → de_de(的得地修正) → ratio_format(16比9→16:9) |
 | 2 | `terminology` | ASR 术语替换 | correction-table.md + overrides，三级匹配(精确→大小写→归一化) |
 | 3 | `spacing` | 混排空格 | CJK-Latin 加空格、数字-字母再紧凑、代码/公式保护 |
-| 4 | `refine` | 级联语义断句 | 8 级递归切割，无语义断点时合并短片段 |
+| 4 | `refine` | 预清洗 + 级联语义断句 | `_clean_segments` 去空/零时长/重复 → 8 级切割 + 教学口语标记 + 动态最小字数 |
 | 5 | `finalize` | 最终清理 | depunct(去标点,保护《》/代码域) → hotkeys(Ctrl+E标准化) |
 
 > `normalize` 和 `finalize` 是合并步骤。旧版单步名 `defiller,de_de,ratio_format,depunct,hotkeys` 仍可通过 `--steps` 使用。
@@ -115,7 +115,7 @@ python3 scripts/enhance.py input.srt --dry-run
 | 脚本 | 用途 |
 |------|------|
 | `scripts/enhance.py` | 主流水线，支持 `--config`、`--steps`、`--skip`、`--overrides`、`--dry-run` |
-| `scripts/refine_segments.py` | 8 级级联语义断句引擎 |
+| `scripts/refine_segments.py` | 级联语义断句引擎 v2（ASR 预清洗 + 8 级语义切割 + 教学口语标记 + 动态最小字数） |
 | `scripts/apply_spacing.py` | CJK-Latin 混排空格（inline 调用，无子进程） |
 | `scripts/domain_scanner.py` | 关键词频次领域检测 |
 | `scripts/title_marker.py` | 游戏/影视作品《》书名号标记 |
