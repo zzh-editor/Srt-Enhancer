@@ -20,7 +20,7 @@ Enhance SRT subtitle files and TXT plain-text transcripts by:
 - Removing Chinese punctuation marks
 - Enforcing single-line subtitles (SRT only)
 - Maintaining exact timestamps and SRT structure (SRT only)
-- Auto-detecting subtitle domain (Maya/Python/Gaming/General) and loading relevant terminology
+- Auto-detecting subtitle domain (Maya/Python/Gaming/AI-3D/Substance/Blender/Unreal/Houdini/ZBrush/Photoshop) and loading relevant terminology
 - Calibrating ASR errors via web search verification
 - Applying mixed-language typesetting rules (CJK-Latin spacing, script boundary spacing, code/formula protection, number-unit formatting, proper noun capitalization)
 - Assigning confidence scores to each correction
@@ -108,7 +108,7 @@ Run `scripts/domain_scanner.py` for keyword-frequency-based domain detection:
 ```bash
 cat input.srt | grep -v '^[0-9]*$' | grep -v '\-\->' | \
     python3 scripts/domain_scanner.py
-# Output: domain=ai-3d  (or general/maya/python/gaming/substance)
+# Output: domain=ai-3d  (or general/maya/python/gaming/substance/blender/unreal/houdini/zbrush/photoshop)
 ```
 
 **AI override**: If the script result seems wrong (e.g., `general` for obvious game content), AI can override the domain manually. The detected domain provides `search_context` for focused web calibration.
@@ -461,7 +461,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 - **`references/example.md`** - Complete worked example with input, processing steps, diff table, and output
 - **`references/enhancement-rules.md`** - Detailed rules for filler word removal, typo detection, semantic analysis strategies, web-based ASR verification, confidence scoring, and incremental learning
 - **`references/correction-table.md`** - ASR→correct terminology mapping table
-- **`references/domains.yaml`** - Domain definitions (keywords + search_context)
+- **`references/domains.yaml`** - Domain definitions (keywords + search_context): maya, python, gaming, ai-3d, substance, blender, unreal, houdini, zbrush, photoshop, general
 - **`references/mixed-typesetting.md`** - Complete specification for mixed-language typesetting
 
 ### Scripts

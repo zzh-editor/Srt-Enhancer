@@ -22,6 +22,22 @@ domains:
       - 四视图
       - text to 3d
       - image to 3d
+      - meshy
+      - tripo
+      - luma ai
+      - luma genie
+      - gaussian splatting
+      - 3dgs
+      - nerf
+      - omniverse
+      - photogrammetry
+      - wonder dynamics
+      - sloyd
+      - dream machine
+      - stable cascade
+      - controlnet
+      - 摄影测量
+      - 高斯泼溅
     search_context: "AI 3D generation tool"
 
   maya:
@@ -49,7 +65,36 @@ domains:
       - 低模
       - 拓扑
       - uv
-    search_context: "Maya 3D modeling software"
+      - arnold
+      - mtoa
+      - bifrost
+      - outliner
+      - retopology
+      - retopo
+      - deform
+      - deformer
+      - skin weight
+      - constraint
+      - lookdevx
+      - pymel
+      - usd
+      - openpbr
+      - golaem
+      - motionmaker
+      - camera sequencer
+      - channel box
+      - animation curve
+      - graph editor
+      - paint weights
+      - keyframe
+      - playback
+      - batch render
+      - 蒙皮
+      - 约束
+      - 变形器
+      - 渲染设置
+      - 材质编辑器
+    search_context: "Maya 3D modeling animation software Autodesk"
 
   python:
     label: "Python Programming"
@@ -59,11 +104,39 @@ domains:
       - def
       - class
       - pyside
+      - pyside6
       - pyqt
       - numpy
       - pandas
       - dataclass
       - lambda
+      - asyncio
+      - type hint
+      - typing
+      - decorator
+      - context manager
+      - comprehension
+      - generator
+      - virtualenv
+      - venv
+      - pip
+      - pytest
+      - unittest
+      - inheritance
+      - polymorphism
+      - list comprehension
+      - return
+      - yield
+      - pycharm
+      - jupyter
+      - anaconda
+      - 变量
+      - 函数
+      - 类
+      - 推导式
+      - 虚拟环境
+      - 异步
+      - 装饰器
     search_context: "Python programming language"
 
   gaming:
@@ -75,11 +148,37 @@ domains:
       - paint over
       - overwatch
       - game art
-      - 虚幻
-      - unreal
-      - ue5
       - artstation
-    search_context: "video game art competition"
+      - game jam
+      - prototype
+      - playtest
+      - art style
+      - turn around
+      - silhouette
+      - color palette
+      - mood board
+      - world building
+      - narrative design
+      - game design document
+      - gdd
+      - tech art
+      - technical artist
+      - shader
+      - hlsl
+      - glsl
+      - polygon count
+      - optimization
+      - 概念设计
+      - 角色设计
+      - 场景设计
+      - 色彩搭配
+      - 剪影
+      - 技术美术
+      - 游戏开发
+      - 资产管线
+      - 概念图
+      - 游戏测试
+    search_context: "video game art competition design industry"
 
   substance:
     label: "Substance Painter / Texturing"
@@ -93,7 +192,205 @@ domains:
       - texture
       - material
       - smart material
-    search_context: "Substance 3D texturing software"
+      - anchor point
+      - uv tile
+      - fill layer
+      - generator
+      - smart mask
+      - export template
+      - texture set
+      - channel pack
+      - mesh map
+      - curvature map
+      - position map
+      - thickness map
+      - udim
+      - baking
+      - 烘焙
+      - alchemist
+      - stager
+      - paint mesh
+      - dynamic material
+      - base color
+      - roughness
+      - metallic
+      - normal map
+      - height map
+      - 曲率
+      - 高度图
+      - 法线贴图
+    search_context: "Substance 3D texturing software Adobe"
+
+  blender:
+    label: "Blender 3D Software"
+    keywords:
+      - blender
+      - eevee
+      - cycles
+      - subdivision surface
+      - modifier
+      - shader editor
+      - geometry nodes
+      - grease pencil
+      - uv editing
+      - sculpt mode
+      - node group
+      - compositor
+      - keyframe
+      - armature
+      - texture paint
+      - solidify
+      - boolean
+      - bevel
+      - mirror
+      - particle system
+      - cloth simulation
+      - rigify
+      - addon
+      - 修改器
+      - 几何节点
+      - 细分曲面
+      - 雕刻模式
+      - 着色器
+      - 粒子系统
+      - 骨骼绑定
+      - UV编辑
+      - 节点编辑器
+    search_context: "Blender 3D open-source modeling animation software"
+
+  unreal:
+    label: "Unreal Engine 5"
+    keywords:
+      - unreal engine
+      - ue5
+      - ue
+      - blueprint
+      - nanite
+      - lumen
+      - world partition
+      - metahuman
+      - niagara
+      - chaos physics
+      - sequencer
+      - control rig
+      - animation blueprint
+      - game mode
+      - behavior tree
+      - level blueprint
+      - landscape
+      - material instance
+      - skeletal mesh
+      - virtual shadow map
+      - render target
+      - post process
+      - volumetric fog
+      - lumen
+      - nanite
+      - 虚幻
+      - 蓝图
+      - 关卡蓝图
+      - 动画蓝图
+      - 材质蓝图
+      - 行为树
+      - 粒子系统
+    search_context: "Unreal Engine 5 game development real-time rendering"
+
+  houdini:
+    label: "Houdini FX"
+    keywords:
+      - houdini
+      - sidefx
+      - vex
+      - attribute wrangle
+      - sop
+      - vop
+      - dop
+      - cop
+      - pyro
+      - flip
+      - rbd
+      - vellum
+      - hda
+      - digital asset
+      - volumes
+      - point cloud
+      - vdb
+      - pop net
+      - solver
+      - for each
+      - topology
+      - 体积
+      - 粒子
+      - 解算器
+      - 属性
+      - 数字资产
+      - 爆炸
+    search_context: "Houdini FX procedural modeling VFX SideFX"
+
+  zbrush:
+    label: "ZBrush Digital Sculpting"
+    keywords:
+      - zbrush
+      - dynamesh
+      - zremesher
+      - subtool
+      - polygroup
+      - fibermesh
+      - zsphere
+      - goz
+      - clay buildup
+      - standard brush
+      - mask
+      - poly paint
+      - spotlight
+      - gizmo 3d
+      - hd geometry
+      - zmodeler
+      - insert mesh
+      - live boolean
+      - bpr render
+      - alphas
+      - 动态网格
+      - 子工具
+      - 多边形组
+      - 遮罩
+      - 拓扑
+      - 雕刻
+    search_context: "ZBrush digital sculpting 3D modeling Maxon"
+
+  photoshop:
+    label: "Photoshop / Digital Painting"
+    keywords:
+      - photoshop
+      - layer mask
+      - adjustment layer
+      - blending mode
+      - brush tool
+      - smart object
+      - selection
+      - pen tool
+      - hue saturation
+      - curves
+      - levels
+      - filter
+      - color balance
+      - dodge and burn
+      - clone stamp
+      - content aware
+      - layer style
+      - gradient
+      - channel
+      - camera raw
+      - 蒙版
+      - 图层
+      - 笔刷
+      - 曲线
+      - 色相
+      - 饱和度
+      - 色彩平衡
+      - 混合模式
+      - 智能对象
+    search_context: "Adobe Photoshop digital painting photo editing"
 
   general:
     label: "General"

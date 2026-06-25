@@ -80,6 +80,28 @@
 | connection editor | Connection Editor | 连接编辑器 |
 | utility node | Utility Node | 工具节点 |
 
+### 1.7 Maya 新特性与工作流
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| arnold / aarnold | Arnold | 渲染器名称 |
+| mtoa / m to a | MtoA | Maya to Arnold 桥接 |
+| by frost / bifrost | Bifrost | 视觉编程/BFX 环境 |
+| lookdev / look dev | LookdevX | 外观开发工具 |
+| motion maker / motionmaker | MotionMaker | Maya 2026 AI 动画工具 |
+| retopo / retopology | Retopology | 拓扑重算 |
+| pymel / pi mel | PyMEL | Python 在 Maya 中的库 |
+| outliner / outliner | Outliner | 大纲视图面板 |
+| deform / deformer | Deformer | 变形器系统总称 |
+| skin cluster | Skin Cluster | 蒙皮簇 |
+| skin weight / width | Skin Weight / Weights | 蒙皮权重 |
+| constraint / constrain | Constraint | 约束系统 |
+| camera sequencer | Camera Sequencer | 镜头序列器 |
+| channel box | Channel Box | 通道栏属性编辑 |
+| animation curve | Animation Curve | 动画曲线编辑 |
+| graph editor | Graph Editor | 曲线图编辑器 |
+| openpbr | OpenPBR | Maya 2026 新默认材质标准 |
+
 ---
 
 ## 2. Python 术语
@@ -104,6 +126,26 @@
 | v box layout | QVBoxLayout | 垂直布局 |
 | grid layout | QGridLayout | 网格布局 |
 | data class | dataclass | 数据类 |
+
+### 2.3 编程工具与库
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| py charm / pychram / pycharm | PyCharm | Python IDE |
+| jupyter / jupiter / jupiter notebook | Jupyter | 交互式笔记本 |
+| anaconda / anna conda | Anaconda | Python 发行版 |
+| pie test / p test | pytest | Python 测试框架 |
+| unit test | unittest | Python 内置测试框架 |
+| pie pi / p ip | pip | Python 包管理器 |
+| asyncio / async io | asyncio | 异步 I/O 库 |
+| type hint / typehint | Type Hint | 类型注解 |
+| decorator / decoration | Decorator | 装饰器模式 |
+| context manager / contextmanager | Context Manager | 上下文管理器 |
+| list comp / comprehension | List Comprehension | 列表推导式 |
+| generator / yield | Generator | 生成器函数 |
+| virtual env / venv | Virtual Environment | 虚拟环境 |
+| 变量 / 变亮 | 变量 | variable 的同音误识 |
+| 推导式 / 推算 | 推导式 | comprehension |
 
 ---
 
@@ -184,7 +226,25 @@
 | paint over | Paint Over | 大小写修正 |
 | Paint over | Paint Over | 大小写修正 |
 
-### 5.3 公司与工作室
+### 5.3 游戏设计流程
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| game jam / game jam | Game Jam | 游戏开发节 |
+| prototype / pro type | Prototype | 原型制作 |
+| play test / plate test | Playtest | 游戏测试 |
+| mood board / move board | Mood Board | 情绪板/视觉调性板 |
+| design document / GDD | Game Design Document | 游戏设计文档 |
+| turn around / 转面 | Turnaround | 角色转面设计 |
+| silhouette / 剪影/减影 | Silhouette | 人物轮廓设计 |
+| color palette / palette | Color Palette | 调色盘/配色方案 |
+| world building | World Building | 世界观构建 |
+| tech art / 技术美术 | Technical Artist | 技术美术师岗位 |
+| asset pipeline / pipeline | Asset Pipeline | 资产制作管线 |
+| polygon budget / poly count | Polygon Budget | 面数预算优化 |
+| concept design / 概念设计 | Concept Design | 概念设计阶段 |
+
+### 5.4 公司与工作室
 
 | ASR 误识别 | 正确术语 | 说明 |
 |-----------|---------|------|
@@ -218,7 +278,7 @@
 
 ---
 
-## 6. AI 3D 生成与虚幻引擎
+## 6. AI 3D 生成
 
 ### 6.1 工具与平台
 
@@ -226,11 +286,27 @@
 |-----------|---------|------|
 | TertReference / preference / pure ref | PureRef | 参考图管理面板 |
 | triple 3d AI | Tripo 3D AI | AI 3D 模型生成平台 |
+| triple / tripa | Tripo | 缩写 |
 | ProForce / profiles | Perforce | 版本控制系统 |
 | Cloud | Claude | Anthropic AI 模型 |
 | TabDown / TypeNode / type now / typenow | TypeNow | AI 生图工具 |
 | TapNow / type now / typenow | TapNow | AI 生图工具（与 TypeNow 关联） |
 | 麦克斯 / 麦壳思 | MAXs | 课程配套插件名称 |
+| messy / meshy | Meshy | AI 3D 模型生成平台 |
+| luma / lumen / luminous | Luma AI | AI 3D/视频生成平台 |
+| genie / jenny | Genie | Luma AI 的 3D 生成工具 |
+| dream machine / dream machine | Dream Machine | Luma AI 视频生成模型 |
+| nerd / nerf | NeRF | 神经辐射场 3D 重建 |
+| omni verse / omnyverse | Omniverse | NVIDIA 3D 协作平台 |
+| sloyd / sloid | Sloyd | 参数化 3D 资产生成 |
+| sloyed / sloide | Sloyd | 参数化 3D 资产生成 |
+| gaussian splat / gauss splat | Gaussian Splatting | 3D 高斯泼溅重建 |
+| photo gram / photo grammetry | Photogrammetry | 摄影测量 3D 重建 |
+| wonder dynamics / wonder | Wonder Dynamics | AI 3D 动画工具 |
+| stable cascade / SC | Stable Cascade | Stability AI 3D 生成模型 |
+| control net / control net 3D | ControlNet 3D | 3D ControlNet 控制网络 |
+| spline / spline 3D | Spline | 交互式 3D 设计工具 |
+| point e / point E | Point-E | OpenAI 3D 点云生成 |
 
 ### 6.2 3D 建模流程
 
@@ -241,8 +317,13 @@
 | 左侧打 | 左侧图 | 左侧参考图 |
 | 兵器器 | 编辑器 | editor |
 | 提词词 / 骑士词 | 提示词 | prompt |
-| 虚幻物引擎 / U15 | 虚幻5引擎 / UE5 | Unreal Engine 5 |
 | 收尾帧 | 首尾帧 | 帧动画起止标记 |
+| 偏激的格式 | PNG 格式 | 发音相似 |
+| 点心面 | 点线面 | 发音相似 |
+| 面素 | 面数 | 发音不完整 |
+| 文理生成 | 纹理生成 | 同音字混淆 |
+| 穿束 | 参数 | 发音相似 |
+| 空 VUI / confi / kungfu | ComfyUI | 发音相似，已知多种变体 |
 
 ### 6.3 界面操作
 
@@ -251,6 +332,335 @@
 | 接下号 | 加号 | 点击 + 按钮 |
 | ctrlv / ctrl+v / ctrl v | Ctrl+V | 快捷键（同理 ctrl+c/ctrl+z/ctrl+s 等） |
 | Facebook | 消耗 | token/credit consumption |
+
+### 6.4 AI 术语常见误识别
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 大模型 | Large Model | AI 大语言模型 |
+| 模型 | 模型 | AI 模型的通用称呼（"模"是正确写法，"摸型"是误写） |
+| 声程 | 生成 | generation，同音字混淆 |
+| 训练 / 讯练 | 训练 | training，同音字混淆 |
+| 推理 / 退离 | 推理 | inference，AI 推理阶段 |
+| 微调 / 味调 | 微调 | fine-tuning |
+| 权重 / 权证 | 权重 | weights，模型权重参数 |
+| 扩散 / 扩展 | 扩散 | diffusion，图像生成扩散模型 |
+| 嵌布 | embedding | 嵌入，AI 特征表示 |
+| 对器 | 对齐 | alignment，训练中对齐（RLHF 等） |
+
+---
+
+## 7. Substance Painter / 材质贴图
+
+### 7.1 软件与工作流
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| substance / sub stance | Substance 3D | 发音相似 |
+| sample / sampler | Sampler | Substance 3D Sampler 材质采集工具 |
+| designer / desiner | Designer | Substance 3D Designer 节点材质工具 |
+| stager / stage | Stager | Substance 3D Stager 场景布景 |
+| alchemist / alchemy | Alchemist | Substance Alchemist 材质生成器 |
+
+### 7.2 贴图与材质
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| anchor / anger point | Anchor Point | Substance Painter 锚点系统 |
+| smart mask / smart mass | Smart Mask | 智能蒙版（发音相似） |
+| fill layer / feel layer | Fill Layer | 填充图层 |
+| texture set / texture set | Texture Set | 纹理集 |
+| export template | Export Template | 导出模板 |
+| channel pack / channel pack | Channel Pack | 通道打包 |
+| paint mesh / pain mesh | Paint Mesh | 网格绘制模式 |
+| dynamic material / dynamic | Dynamic Material | 动态材质 |
+
+### 7.3 贴图类型与烘焙
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| mesh map / mesh map | Mesh Map | 网格贴图（法线/曲率/位置/厚度） |
+| curvature / curvy ture | Curvature Map | 曲率贴图 |
+| position map / position | Position Map | 位置贴图 |
+| thickness / thickness map | Thickness Map | 厚度贴图 |
+| udim / u dim / u dim | UDIM | UV 瓷砖编号工作流 |
+| baking / bagging | Baking | 低模→高模烘焙通道 |
+| normal map / norm map | Normal Map | 法线贴图 |
+| height map / hight map | Height Map | 高度贴图 |
+| 烘焙 / 哄培 / 烘培 | 烘焙 | baking，常见同音字混淆 |
+| 曲率 / 曲律 / 曲力 | 曲率 | curvature map，同音字混淆 |
+| 法线贴图 / 法形贴图 | 法线贴图 | normal map，常见误写 |
+
+---
+
+## 8. Blender 术语
+
+### 8.1 软件与渲染引擎
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| blender / blend her | Blender | 发音相似，大小写修正 |
+| blend her | Blender | 发音相似 |
+| eevee / e v / e vee | Eevee | 实时渲染引擎 |
+| cycles / cycles render | Cycles | 基于物理的路径追踪渲染器 |
+| workbench / work beach | Workbench | 视口显示引擎 |
+
+### 8.2 建模与修改器
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| modifier / modifi er | Modifier | 修改器系统 |
+| sub division / sub divis | Subdivision Surface | 细分曲面修改器 |
+| solidify / solify / solid | Solidify | 实体化修改器 |
+| bevel / beval / bev | Bevel | 倒角修改器 |
+| boolean / boole an | Boolean | 布尔运算修改器 |
+| mirror / miror | Mirror | 镜像修改器 |
+| geometry nodes / geo nodes | Geometry Nodes | 几何节点系统 |
+| goo nodes / geo | Geometry Nodes | 发音相似 |
+| node group / node group | Node Group | 节点组，可封装复用 |
+
+### 8.3 雕刻与纹理
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| sculpt / sculp | Sculpt Mode | 雕刻模式 |
+| grease pencil / grease | Grease Pencil | 蜡笔 2D/3D 动画工具 |
+| texture paint / tex paint | Texture Paint | 纹理绘制模式 |
+| shader editor / shader | Shader Editor | 着色器节点编辑器 |
+| compositor / compositer | Compositor | 合成器节点编辑器 |
+| uv editing / u v | UV Editing | UV 编辑工作区 |
+| armature / armature | Armature | 骨架绑定系统 |
+| rigify / rigi fy | Rigify | 自动角色绑定插件 |
+
+### 8.4 中文常用术语
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 修改器 / 修改气 | 修改器 | Modifier |
+| 细分曲面 / 细分区面 | 细分曲面 | Subdivision Surface |
+| 着色器 / 设色器/射器 | 着色器 | Shader |
+| 粒子系统 / 粒子系 | 粒子系统 | Particle System |
+| 雕刻模式 / 调动雕刻 | 雕刻模式 | Sculpt Mode |
+| 骨骼绑定 / 骨骼绑 | 骨骼绑定 | Rigging / Armature |
+| 蜡笔 / 拉笔 | Grease Pencil | 2D 动画工具 |
+| 几何节点 / 集合节点 | 几何节点 | Geometry Nodes |
+
+---
+
+## 9. Unreal Engine 术语
+
+### 9.1 引擎与核心系统
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| unreal / 虚幻 | Unreal Engine | 虚幻引擎 |
+| ue5 / u15 / u e 5 | UE5 | Unreal Engine 5，数字误识别 |
+| blue print / blue print | Blueprint | 蓝图可视化脚本系统 |
+| blueprint / blue print | Blueprint | 空格修正 |
+| nanite / night / na nite | Nanite | 虚拟化微多边形几何系统 |
+| lumen / luminous / lu men | Lumen | 动态全局光照和反射系统 |
+| niagara / ni agra / nigara | Niagara | 视觉特效粒子系统 |
+| chaos / chaos physics | Chaos Physics | 物理破坏系统 |
+| metahuman / meta human | MetaHuman | 高保真数字人框架 |
+| world partition / world part | World Partition | 世界分区流式加载 |
+
+### 9.2 关卡与动画
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| sequencer / sequence | Sequencer | 过场动画/关卡序列编辑器 |
+| control rig / control rig | Control Rig | 控制绑定系统 |
+| animation blueprint / anim bp | Animation Blueprint | 动画蓝图 |
+| behavior tree / behavior | Behavior Tree | 行为树 AI 系统 |
+| game mode / game mode | Game Mode | 游戏模式规则类 |
+| level blueprint / level bp | Level Blueprint | 关卡蓝图 |
+| landscape / land scape | Landscape | 地形系统 |
+| material instance / mat instance | Material Instance | 材质实例 |
+| skeletal mesh / skeleton mesh | Skeletal Mesh | 骨架网格体 |
+| virtual shadow map / vsm | Virtual Shadow Map | 虚拟阴影贴图 |
+| render target / render | Render Target | 渲染目标 |
+| post process / poster | Post Process | 后处理体积 |
+
+### 9.3 中文 UE 术语
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 蓝图 / 蓝图系统 | Blueprint | 中文术语 |
+| 虚幻物引擎 / 虚幻物 | 虚幻5引擎 / UE5 | 发音相似 |
+| 关卡蓝图 / 关卡 | Level Blueprint | 关卡脚本系统 |
+| 动画蓝图 / 动画蓝 | Animation Blueprint | 动画状态机 |
+| 材质蓝图 / 材质 | Material Blueprint | 材质编辑器 |
+| 行为树 / 行为数 | Behavior Tree | AI 行为决策系统 |
+| 世界分区 / 世界分割 | World Partition | 大型世界加载方案 |
+| 序列器 / 序列气 | Sequencer | 过场动画编辑器 |
+| 混沌物理 / 混乱物理 | Chaos Physics | 物理破坏与模拟 |
+
+---
+
+## 10. Houdini FX 术语
+
+### 10.1 软件与脚本
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| houdini | Houdini | 大小写修正 |
+| side fx / side effects | SideFX | 发音相似（SideFX 是 Houdini 开发商） |
+| vex / vecks / vx | VEX | Houdini 内置脚本语言（发音相似） |
+| hda / digital asset | HDA / Digital Asset | Houdini 数字资产封装 |
+| attribute wrangle / wrangler | Attribute Wrangle | 属性编辑节点（发音相似/拼写错误） |
+
+### 10.2 节点系统
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| sop / s o p | SOP | Surface Operator，几何体操作节点 |
+| vop / v o p | VOP | VEX Operator，着色器节点 |
+| dop / d o p | DOP | Dynamics Operator，动力学节点 |
+| pop net / pop net | POP Net | Particle Operator 粒子网络 |
+| cop / c o p | COP | Compositing Operator，合成节点 |
+| solver / solver node | Solver | 解算器节点（循环递进计算） |
+| group / group node | Group | 几何体组（发音不完整） |
+| for each / for each | For Each | 循环节点 |
+
+### 10.3 特效与仿真
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| pyro / pie ro | Pyro | 火焰/烟雾仿真（发音相似） |
+| flip / flew / flup | FLIP | 流体仿真（Liquid Simulation） |
+| rbd / r b d | RBD | 刚体动力学（Rigid Body Dynamics） |
+| vellum / velum | Vellum | 布料/柔体/毛发仿真 |
+| volumes / volume | Volume | 体积（VDB 格式） |
+| point cloud / point | Point Cloud | 点云数据 |
+| vdb / v d b | VDB | OpenVDB 体积数据格式 |
+
+### 10.4 中文术语
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 数字资产 / 数码资产 | HDA / Digital Asset | 可复用的 Houdini 节点封装 |
+| 解算器 / 计算器 | Solver | 发音相似，物理求解引擎 |
+| 属性 / 属型 / 属心 | Attribute | 同音字，几何体数据 |
+| 粒子 / 力子 | Particle | 同音字区别 |
+| 体积 / 体极 | Volume | 3D 体素数据 |
+| 爆炸 / 报炸 | 爆炸 | explosion 同音字 |
+
+---
+
+## 11. ZBrush 术语
+
+### 11.1 软件名称
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| z brush / Z brush / zee brush | ZBrush | 空格/发音修正 |
+| zee brush | ZBrush | 发音相似 |
+| zb / z b | ZBrush | 缩写 |
+| brush / z brush | ZBrush | 软件名（不是笔刷） |
+
+### 11.2 核心功能
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| dynamesh / dynamic mesh | DynaMesh | 动态网格，实时重构拓扑 |
+| dynamic mesh | DynaMesh | 发音相似含义相同 |
+| z remesher / re-mesher | ZRemesher | 自动拓扑重构工具 |
+| sub tool | Subtool | 子工具，ZBrush 中的独立模型层 |
+| poly group | Polygroup | 多边形组，类似光滑组的集合 |
+| fibermesh / fiber mesh | FiberMesh | 纤维网格系统（头发/毛发） |
+| fiber / fiber | FiberMesh | 缩写 |
+| zsphere / z sphere | ZSphere | Z 球，自适应骨架系统 |
+| goz / go z | GoZ | ZBrush ↔ 其他软件桥接传输 |
+
+### 11.3 笔刷与渲染
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| clay buildup / clay build | Clay Buildup | 粘土堆积笔刷 |
+| standard brush / standard | Standard Brush | 标准笔刷（ZBrush 基础笔刷） |
+| mask / masking | Mask | 遮罩，保护不受笔刷影响 |
+| poly paint / poly paint | PolyPaint | 多边形顶点着色 |
+| spotlight / spot light | Spotlight | 聚光灯投影贴图工具 |
+| gizmo / gyzmo | Gizmo 3D | 变形操作器（移动/旋转/缩放） |
+| hd geometry / h d geo | HD Geometry | 高分辨率细分几何体 |
+| zmodeler / z modeler | ZModeler | 多边形直接建模系统 |
+| insert mesh / insert | Insert Mesh | 插入网格笔刷 |
+| live boolean / live | Live Boolean | 实时布尔运算 |
+| bpr render / bpr | BPR | 最佳预览渲染（Best Preview Render） |
+| alphas / alpha | Alpha | 笔刷灰度图/纹理贴图 |
+
+### 11.4 中文术语
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 动态网格 / 动感网格 | DynaMesh | 发音相似 |
+| 子工具 / 子工具栏 | Subtool | 模型层级管理 |
+| 多边形组 / 多边组 | Polygroup | 多边形分组 |
+| 纤维 / 纤维网格 | FiberMesh | 发丝/纤维生成 |
+| 拓扑 / 拓补 / 拓朴 | 拓扑 | Topology，常见错字 |
+| 遮罩 / 遮照 / 遮造 | 遮罩 | Mask，保护区域的覆盖层 |
+| 笔刷 / 臂刷 | 笔刷 | Brush |
+
+---
+
+## 12. Photoshop / 数字绘画术语
+
+### 12.1 软件名称
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| photoshop / photo shop | Photoshop | 空格修正 |
+| ps | Photoshop | 常见缩写 |
+| photo shop | Photoshop | 空格修正 |
+| camera raw / camera row | Camera Raw | 原始照片处理插件 |
+
+### 12.2 图层与蒙版
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| layer mask / layer mask | Layer Mask | 图层蒙版，大小写修正 |
+| adjustment layer / adjust | Adjustment Layer | 调整图层 |
+| blending mode / blend mode | Blending Mode | 混合模式 |
+| smart object / smart | Smart Object | 智能对象，非破坏性编辑 |
+| layer style / layer style | Layer Style | 图层样式（阴影/发光/浮雕） |
+| fill layer / fill | Fill Layer | 纯色/渐变/图案填充图层 |
+
+### 12.3 选择与工具
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| selection / select | Selection | 选区工具 |
+| pen tool / pen | Pen Tool | 钢笔路径工具 |
+| brush tool / brush | Brush Tool | 画笔工具 |
+| clone stamp / clone | Clone Stamp | 仿制图章工具 |
+| dodge and burn / dodge | Dodge & Burn | 加深减淡局部调整技术 |
+| content aware / content | Content-Aware | 内容识别填充 |
+| gradient / gradiant | Gradient | 渐变工具（拼写错误） |
+
+### 12.4 色彩与调整
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| hue saturation / hue | Hue/Saturation | 色相/饱和度调整 |
+| curves / curve | Curves | 曲线调色工具 |
+| levels / level | Levels | 色阶调整 |
+| color balance / colour | Color Balance | 色彩平衡 |
+| channel / channels | Channel | 通道面板（RGB/Alpha） |
+| filter / filter | Filter | 滤镜效果 |
+
+### 12.5 中文术语
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 蒙版 / 蒙板 / 朦版 | 蒙版 | Mask，常见错字 |
+| 图层 / 曾 / 图曾 | 图层 | Layer，同音字混淆 |
+| 笔刷 / 臂刷 / 逼刷 | 笔刷 | Brush |
+| 曲线 / 区线 | Curves | 同音字混淆 |
+| 色相 / 色像 / 涉相 | Hue | 同音字混淆 |
+| 饱和度 / 包合度 / 报合度 | Saturation | 发音/同音字混淆 |
+| 色彩平衡 / 色彩平横 | Color Balance | 同音字混淆 |
+| 色调 / 色掉 | Tone | 同音字混淆 |
+| 滤镜 / 虑镜 | Filter | 同音字混淆 |
 
 ---
 

@@ -44,7 +44,7 @@ TERMINOLOGY_PATH = REFERENCES_DIR / "correction-table.md"
 
 DEFAULT_CONFIG = {
     "lang": "zh",
-    "domain": None,          # auto-detect, or "maya" / "python" / "gaming" / "ai-3d"
+    "domain": None,          # auto-detect, or "maya" / "python" / "gaming" / "ai-3d" / "substance" / "blender" / "unreal" / "houdini" / "zbrush" / "photoshop"
     "match_mode": "auto",    # "exact" | "auto" (exact → casefold → normalized)
     "filler_words": [
         "啊", "哦", "嗯", "呃", "哎", "噢", "唔", "欸", "嘿",
@@ -624,7 +624,7 @@ def main():
     parser.add_argument("--lang", default="zh",
                         help="language code (zh/en/ja/ko)")
     parser.add_argument("--domain", default=None,
-                        help="domain: maya/python/gaming/general ai-3d")
+                        help="domain: maya/python/gaming/ai-3d/substance/blender/unreal/houdini/zbrush/photoshop/general")
     parser.add_argument("--steps", default="normalize,terminology,spacing,terminology,refine,finalize",
                         help="comma-separated pipeline steps to run")
     parser.add_argument("--skip", default=None,
