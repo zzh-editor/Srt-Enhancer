@@ -325,3 +325,20 @@
 | controld | Ctrl+D | 快捷键；用户确认修正 |
 | 玛雅 | Maya | ASR 校准；用户确认修正 |
 | 虚幻无影前 | 虚幻5引擎 | UE5 Unreal Engine 5；用户确认修正 |
+| 运从围一下 | 另存为一下 | Hyper3D Rodin 工作流操作；用户确认修正 |
+| 两把外面的这个 | 然后把外面的这个 | ASR 误识别；用户确认修正 |
+| Hyper 3D Routing | Hyper3D Rodin | 带空格的 ASR 形式；用户确认修正 |
+| Image 2 3D | Image To 3D | AI 3D 工具；用户确认修正 |
+| next | Legacy | Rodin Gen 材质模式；用户确认修正 |
+| negative | Native | Rodin Gen 材质模式；用户确认修正 |
+| 点心面 | 点线面 | 发音相似；用户确认修正 |
+| 面素 | 面数 | 发音不完整；用户确认修正 |
+| 文理生成 | 纹理生成 | 同音字混淆；用户确认修正 |
+| 穿束 | 参数 | 发音相似；用户确认修正 |
+| 空 VUI | ComfyUI | 发音相似；用户确认修正 |
+| confi | ComfyUI | 文件夹名；用户确认修正 |
+| KungfuUI | ComfyUI | 用户自定义名称，统一写法；用户确认修正 |
+| type down | TapNow | 剩余未匹配项；用户确认修正 |
+| PBI | PBR | 单处遗漏；用户确认修正 |
+| 偏激的格式 | PNG 格式 | 发音相似；用户确认修正 |
+| 循环5（非 Maya 语境） | 虚幻5 | 单处"循环5→虚幻5"在材质语境中；用户确认修正 |

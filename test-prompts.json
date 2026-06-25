@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "优化这个字幕文件 /Users/rubber/Downloads/raw_transcript.srt",
+    "expected": "加载 → 领域检测 → 构建 config → enhance.py 流水线 → diff 审核 → 用户确认 → 输出 _Enhancer.srt"
+  },
+  {
+    "id": 2,
+    "prompt": "增强这个字幕，内容是 3D 建模教程 /Users/rubber/Downloads/maya_basics.txt",
+    "expected": "TXT 解析 → domain_scanner 检测 maya → 联网校准术语（Maya 专有名词）→ enhance.py → 标题标记 → 输出 _Enhancer.txt"
+  },
+  {
+    "id": 3,
+    "prompt": "帮我清理这个 SRT 里的口癖词并修正的得地 /Users/rubber/Downloads/lecture.srt",
+    "expected": "enhance.py 的 normalize 步骤（defiller + de_de）→ finalize → diff 审核 → 输出"
+  }
+]

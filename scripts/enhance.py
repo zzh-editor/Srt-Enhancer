@@ -21,6 +21,7 @@ Steps (applied in order, all optional):
 """
 
 import argparse
+import collections
 import importlib.util
 import json
 import os
@@ -373,8 +374,9 @@ def step_spacing(segments: list[dict], config: dict) -> list[dict]:
         print("warning: apply_spacing module not found, skipping spacing",
               file=sys.stderr)
         return segments
+    domain = config.get("domain")
     for seg in segments:
-        seg["text"] = _do_spacing(seg["text"])
+        seg["text"] = _do_spacing(seg["text"], domain=domain)
     return segments
 
 
@@ -551,6 +553,62 @@ def run_pipeline(segments: list[dict], config: dict,
     return segments
 
 
+# ── Casing consistency check ────────────────────────────────────────
+
+ENGLISH_TOKEN = re.compile(r'\b[A-Za-z][A-Za-z0-9]*\b')
+
+
+def check_casing(segments: list[dict]) -> None:
+    """Scan all SRT text for inconsistent English term casing.
+
+    Groups by lowercase form, reports terms with 2+ different casings.
+    """
+    from apply_spacing import CASE_GROUPS, CAPITALIZATION_MAP
+
+    # Collect all tokens
+    variants: dict[str, set[str]] = collections.defaultdict(set)
+    for seg in segments:
+        for m in ENGLISH_TOKEN.finditer(seg["text"]):
+            token = m.group(0)
+            if len(token) <= 1:
+                continue
+            variants[token.lower()].add(token)
+
+    # Build known casing from CAPITALIZATION_MAP + CASE_GROUPS
+    known: dict[str, str] = {}
+    for k, v in CAPITALIZATION_MAP.items():
+        known[k.lower()] = v
+    for group in CASE_GROUPS.values():
+        for k, v in group.items():
+            if k not in known:
+                known[k] = v
+
+    # Report
+    n_issues = 0
+    for key in sorted(variants):
+        hits = variants[key]
+        if len(hits) <= 1:
+            continue
+        n_issues += 1
+        std = known.get(key)
+        std_hint = f" → 建议: {std}" if std else ""
+        hit_list = ', '.join(sorted(hits))
+        print(f"  {hit_list}{std_hint}")
+
+    if n_issues == 0:
+        print("  (all consistent — no terms with mixed casing)")
+    else:
+        print(f"\n  {n_issues} term(s) with inconsistent casing above")
+
+    # Also report known terms that were never found
+    n_miss = 0
+    for key, std in sorted(known.items()):
+        if key not in variants:
+            pass  # silent — too noisy
+    if n_miss:
+        print(f"  {n_miss} known term(s) not found in output")
+
+
 # ── CLI ─────────────────────────────────────────────────────────────
 
 def main():
@@ -567,7 +625,7 @@ def main():
                         help="language code (zh/en/ja/ko)")
     parser.add_argument("--domain", default=None,
                         help="domain: maya/python/gaming/general ai-3d")
-    parser.add_argument("--steps", default="normalize,terminology,spacing,refine,finalize",
+    parser.add_argument("--steps", default="normalize,terminology,spacing,terminology,refine,finalize",
                         help="comma-separated pipeline steps to run")
     parser.add_argument("--skip", default=None,
                         help="comma-separated steps to skip")
@@ -575,6 +633,8 @@ def main():
                         help="JSON string for terminology_overrides")
     parser.add_argument("--dry-run", action="store_true",
                         help="parse and print steps without executing")
+    parser.add_argument("--check-casing", action="store_true",
+                        help="scan output for inconsistent English term casing")
 
     args = parser.parse_args()
 
@@ -617,6 +677,11 @@ def main():
           file=sys.stderr)
 
     out = run_pipeline(segments, config, enabled)
+
+    if args.check_casing:
+        print("casing consistency check:", file=sys.stderr)
+        check_casing(out)
+        return
 
     output_path = args.output or args.input.replace(".srt", "_Enhancer.srt")
     if output_path == args.input:

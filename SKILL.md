@@ -52,7 +52,7 @@ Use this skill when the user mentions or uploads files related to:
     - AI 上下文猜测 → 最低优先，标注 ❗
  5. **Hybrid AI + Script Execution**:
     - AI handles: language detection, web calibration (fallback), config preparation, result review
-    - **`scripts/enhance.py`** handles: deterministic pipeline execution (normalize → terminology → spacing → refine → finalize)
+    - **`scripts/enhance.py`** handles: deterministic pipeline execution (normalize → terminology → spacing → terminology → refine → finalize)
     - **`scripts/domain_scanner.py`** handles: domain detection (keyword scoring)
     - **`scripts/title_marker.py`** handles: game/media title marking
     - **`scripts/confidence_scorer.py`** handles: confidence scoring
@@ -82,7 +82,7 @@ The user uploads a file (`.srt` or `.txt`) directly via the dialog:
 
 ### 1.5. Confirm Mixed-Language Typesetting
 
-**暂停。** 用 Question 工具弹窗询问用户：
+**🔴 CHECKPOINT · 🛑 STOP：** 用 Question 工具弹窗询问用户：
 - header: "中西文混排规范确认"
 - options:
   - label: "保持默认开启" → description: "CJK-Latin 自动加空格，代码保护，数字单位紧凑"
@@ -191,12 +191,15 @@ python3 scripts/enhance.py input.srt --steps terminology,spacing
 | Step | CLI name | What it does |
 |------|----------|-------------|
 | 1 | `normalize` | Combined: defiller(去掉口癖) → de_de(的得地修正) → ratio_format(16比9 → 16:9) |
-| 2 | `terminology` | Apply ASR→correct mapping from `correction-table.md` + overrides, with fuzzy matching |
-| 3 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` (inlined, no subprocess overhead) |
-| 4 | `refine` | Semantic segment refinement: cascading split (句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离) |
-| 5 | `finalize` | Combined: depunct(去标点, 保留`《》`和代码保护域) → hotkeys(标准化Ctrl+E等快捷键, 最后执行避免+被剥离) |
+| 2 | `terminology` | 第一轮术语替换：Apply ASR→correct mapping from `correction-table.md` + overrides, with fuzzy matching |
+| 3 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` (inlined, no subprocess overhead)，含 domain-aware casing |
+| 4 | `terminology` | 第二轮术语替换：spacing 过程中部分英文被规范化后，再次匹配 correction-table.md 中的复合术语（如 Image2 3D → Image To 3D） |
+| 5 | `refine` | Semantic segment refinement: cascading split (句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离) |
+| 6 | `finalize` | Combined: depunct(去标点, 保留`《》`和代码保护域) → hotkeys(标准化Ctrl+E等快捷键, 最后执行避免+被剥离) |
 
-> **旧版 --steps 向后兼容：** `defiller,de_de,ratio_format,depunct,hotkeys` 等单步名称仍然可用。但推荐使用合并后的 5 步名称 (`normalize`, `finalize`) 获得更好性能。
+> **关于双 terminology 轮次**：第二轮术语替换捕获 spacing 后英文规范化产生的复合术语（如 Image2 3D → Image To 3D）。仅当 ASR 输出包含中文语境中的英文复合术语时有效。若无此类内容，第二轮是空操作，不影响性能。
+
+> **旧版 --steps 向后兼容：** `defiller,de_de,ratio_format,depunct,hotkeys` 等单步名称仍然可用。但推荐使用合并后的步骤名称。`terminology` 在 pipeline 中出现两次（step 2 和 step 4），--steps 默认值已包含双轮：`normalize,terminology,spacing,terminology,refine,finalize`。
 
 > **关于 `--skip refine`**：如果上游流程（如 video-transcribe）已在转录后执行过语义断句，调用 srt-enhancer 时可通过 `--skip refine` 跳过此步骤，避免重复分割。
 
@@ -214,7 +217,11 @@ cat output.srt | grep -v '^[0-9]*$' | grep -v '\-\->' | \
     python3 scripts/title_marker.py
 ```
 
-AI overrides any remaining edge cases (titles not in the known list).
+AI overrides only when **all** conditions met:
+- title_marker.py returned no match for a token
+- Token matches a known game/media title pattern (≥2 words, capitalized, common title suffix like `2`/`3`/`World`/`War`/`Craft`)
+- Web search confirms it's a game/media title (top-1 result is a title page or database entry)
+- If any condition fails → keep original text, do not override
 
 **b. Web-based ASR calibration (remaining unmatched terms only):**
 - Scan output for terms NOT matched by any correction table
@@ -268,7 +275,7 @@ Diff 审核表仅在对话窗口中输出，不写入文件系统。用户确认
 ❗ = 需要用户确认
 ```
 
-**User Review Workflow:**
+**🔴 CHECKPOINT · 🛑 STOP User Review Workflow:**
 1. 呈现 Diff 审核表
 2. **用 Question 工具弹窗询问用户：**
    - header: "确认修改"
@@ -339,7 +346,7 @@ When encountering a potentially incorrect term:
 ### Enhancement Checklist
 
 1. **AI Phase** (§3 Core Workflow) → detect domain → prepare config → 🔴 CHECKPOINT → execute enhance.py
-2. **enhance.py** (§4) → `normalize → terminology → spacing → refine → finalize` (zero AI)
+2. **enhance.py** (§4) → `normalize → terminology → spacing → terminology → refine → finalize` (zero AI)
 3. **AI Review** (§5-6) → title_marker.py → confidence_scorer.py → diff table → user confirm
 4. **Output** (§7) → write file → persist corrections to `correction-table.md`
 
@@ -374,10 +381,10 @@ When encountering a potentially incorrect term:
 
 **处理流程:**
 1. AI 检测语言(zh)、领域(Python)、联网校准 → 生成 JSON config
-2. `enhance.py --lang zh --domain python --steps normalize,terminology,spacing,refine,finalize`
+2. `enhance.py --lang zh --domain python --steps normalize,terminology,spacing,terminology,refine,finalize`
 3. AI 复核：书名号标记 → diff 审核 → 用户确认 → 持久化术语
 
-**输出到 `input_Enhancer.srt`:** 去口癖 `嗯`/`啊` → 的得地修正 + 比例格式 → Python 术语 → 混排 → 断句 → 去标点 → 快捷键标准化
+**输出到 `input_Enhancer.srt`:** 去口癖 `嗯`/`啊` → 的得地修正 + 比例格式 → Python 术语 → 混排(domain-aware casing) → 二次术语替换 → 断句 → 去标点 → 快捷键标准化
 
 See `references/example.md` for a complete worked example (input → processing steps → diff table → output).
 
@@ -398,7 +405,7 @@ See `references/example.md` for a complete worked example (input → processing 
 ### Must DO:
 - **对照表优先原则**：用户 overrides > correction-table.md > 领域感知联网搜索 > AI 上下文猜测
 - **Use AI for**: language detection, web calibration (table-unmatched only), config building, result review
-- **Use `scripts/enhance.py` for**: deterministic pipeline (normalize, terminology, spacing, refine, finalize)
+- **Use `scripts/enhance.py` for**: deterministic pipeline (normalize → terminology → spacing → terminology → refine → finalize)
 - **Use `scripts/domain_scanner.py` for**: domain detection (keyword scoring)
 - **Use `scripts/title_marker.py` for**: known game/film title marking
 - **Use `scripts/confidence_scorer.py` for**: deterministic confidence scoring
@@ -458,7 +465,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 - **`references/mixed-typesetting.md`** - Complete specification for mixed-language typesetting
 
 ### Scripts
-- **`scripts/enhance.py`** - **Main enhancement pipeline.** Deterministic pipeline: normalize(去口癖+的得地+比例格式) → terminology → spacing → refine → finalize(去标点+快捷键). Supports `--config`, `--steps`, `--skip`, `--overrides`, `--dry-run`, `--match-mode`.
+- **`scripts/enhance.py`** - **Main enhancement pipeline.** Deterministic pipeline: normalize(去口癖+的得地+比例格式) → terminology → spacing → terminology(第二轮复合术语匹配) → refine → finalize(去标点+快捷键). Supports `--config`, `--steps`, `--skip`, `--overrides`, `--dry-run`, `--match-mode`.
 - **`scripts/apply_spacing.py`** - Deterministic CJK-Latin spacing tool. Called by enhance.py.
 - **`scripts/domain_scanner.py`** - Keyword-frequency domain detection. Usage: `cat text_lines | python3 domain_scanner.py`
 - **`scripts/confidence_scorer.py`** - Deterministic confidence scoring. Provides `score(source, sub_type)` → `(value, reason)`.
@@ -473,9 +480,9 @@ Each workflow step has an explicit failure branch. Follow this table when any st
                     (对照表 > 静态表 > 联网搜索)
                          │
                          ▼
-               enhance.py (0 AI, fully deterministic)
-    normalize → terminology → spacing → refine → finalize
-    └ defiller+de_de+ratio_format         └ depunct+hotkeys
+                enhance.py (0 AI, fully deterministic)
+     normalize → terminology → spacing → terminology → refine → finalize
+     └ defiller+de_de+ratio_format              └ depunct+hotkeys
                          │
                          ▼
                AI Review Phase (1-2 rounds)
