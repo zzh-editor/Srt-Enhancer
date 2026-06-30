@@ -41,6 +41,76 @@ git pull origin main  # 更新
 
 > 需要 Python 3.8+。
 
+## 使用方式
+
+所有字幕优化只用一句话描述需求 + 字幕文件，Agent 自动处理后续。
+
+### 基础优化
+
+```
+用户：优化这个字幕 meeting.srt
+Agent：检测到字幕文件 → 领域检测 → 执行 6 步流水线
+       生成 diff 审核表
+       🔴 CHECKPOINT: 确认修改
+       用户确认 → 写入 meeting_Enhancer.srt
+```
+
+```
+用户：增强字幕 lecture.srt
+Agent：检测到字幕文件 → 通用领域 → 流水线处理
+       生成 diff 审核表 → 用户确认 → 写入 lecture_Enhancer.srt
+```
+
+### 混排空格控制
+
+```
+用户：优化字幕 tutorial.srt 关闭空格
+Agent：检测到字幕文件 → 关闭混排空格功能
+       跳过 spacing 步骤 → 其余 5 步正常执行
+       用户确认后写入
+```
+
+```
+用户：优化字幕 tutorial.srt 开启空格
+Agent：检测到字幕文件 → 开启混排空格
+       完整 6 步流水线 → 用户确认后写入
+```
+
+### 指定领域
+
+```
+用户：优化字幕 code.srt --domain python
+Agent：检测到字幕文件 → 设置 Python 领域
+       CASE_GROUPS 按 Python 领域规范化（保持文件扩展名小写）
+       输出时 PyCharm 等品牌工具保持原样
+```
+
+### 自定义覆盖术语
+
+```
+用户：优化字幕 game.srt --overrides '{"Owatch":"Overwatch","R Center":"Art Center"}'
+Agent：检测到字幕文件 → 加载默认术语表
+       合并用户自定义覆盖 → 流水线处理
+```
+
+### 预览模式
+
+```
+用户：优化字幕 draft.srt --dry-run
+Agent：检测到字幕文件 → 执行流水线但不写入
+       仅展示 diff 审核表供预览
+       用户可决定是否正式执行
+```
+
+### 大小写一致性检查
+
+```
+用户：优化字幕 asset.srt --check-casing
+Agent：检测到字幕文件 → 流水线处理
+       额外扫描输出中英文术语大小写不一致
+       给出规范化建议表
+```
+
 ## 工作流程
 
 ```
@@ -116,33 +186,6 @@ SRT Enhancer 包含三层专名保护机制：
 | `general` (默认) | obj,fbx,gltf | HDR,PBR | ZBrush,Blender | - | macOS |
 | `ai-3d` | obj,fbx,gltf | HDR,PBR | ZBrush | Rodin,Gen | macOS |
 | `python` | obj,fbx,gltf | HDR,PBR | PyCharm | - | macOS |
-
-## 直接调用脚本
-
-```bash
-# 基础
-python3 scripts/enhance.py input.srt -o output_Enhancer.srt --lang zh --domain maya
-
-# 带用户覆盖术语
-python3 scripts/enhance.py input.srt -o output_Enhancer.srt \
-  --lang zh --domain maya+gaming \
-  --overrides '{"Owatch":"Overwatch","R Center":"Art Center"}'
-
-# 仅特定步骤
-python3 scripts/enhance.py input.srt --steps terminology,spacing
-
-# 跳过 refine（上游已做语义断句时）
-python3 scripts/enhance.py input.srt --skip refine
-
-# 干跑预览
-python3 scripts/enhance.py input.srt --dry-run
-
-# 大小写不一致检测
-python3 scripts/enhance.py input.srt --check-casing
-
-# 指定领域（影响 CASE_GROUPS 大小写规范化）
-python3 scripts/enhance.py input.srt --domain ai-3d
-```
 
 ## 脚本
 
