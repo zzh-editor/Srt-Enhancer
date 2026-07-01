@@ -121,6 +121,8 @@ cat input.srt | grep -v '^[0-9]*$' | grep -v '\-\->' | \
 
 Override 后已匹配的领域提供 `search_context` 用于聚焦联网校准。
 
+🔴 domain override 后联网校准仍无匹配 → 查 Failure Handling 表「domain override 后匹配领域仍不准确」
+
 Report detected domain(s) to the user: `检测到领域: AI 3D 生成`
 
 ### 3. AI Prepares Config & Overrides
@@ -447,6 +449,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 |---------|---------|-----------|
 | SRT 文件解析失败（格式无效/时间戳错误/编号不连续） | 提示用户并提供行号 | 回退为 TXT 逐行处理，不做时间轴保证 |
 | 领域检测无匹配 | 使用通用术语表 | 跳过术语校准，仅执行其他步骤 |
+| domain override 后匹配领域仍不准确（联网校准无权威结果） | 回退到 general 领域用通用术语表 | 保留 general 领域，跳过该词条校准，在 diff 中标记 ❗ |
 | domain_scanner.py 执行失败（缺依赖/报错） | 回退到 AI 关键词扫描 | 跳过领域检测，用 general |
 | 比率格式正则误匹配（如误改"对比"） | 误匹配回退到原文 | 标记 `#ratio_overmatch` |
 | 口癖去除后字幕变空 | 保留最小有意义的词组 | 保留原始文本并标记 `#unmodified` |
