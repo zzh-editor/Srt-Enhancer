@@ -111,7 +111,15 @@ cat input.srt | grep -v '^[0-9]*$' | grep -v '\-\->' | \
 # Output: domain=ai-3d  (or general/maya/python/gaming/substance/blender/unreal/houdini/zbrush/photoshop)
 ```
 
-**AI override**: If the script result seems wrong (e.g., `general` for obvious game content), AI can override the domain manually. The detected domain provides `search_context` for focused web calibration.
+**AI override — domain override decision tree**:
+
+| 触发条件 | 处理动作 | 报告格式 |
+|---------|---------|---------|
+| domain_scanner 返回 `general`，但输入中 ≥3 个领域关键词匹配另一领域 | 改用关键词匹配的领域 | `检测到领域: {override_domain} (关键词: {matched_keywords})` |
+| domain_scanner 返回某个领域但匹配关键词 <3 个，且内容上下文明显指向另一领域 | 改用内容匹配的领域 | `检测到领域: {override_domain} (手动修正，原因: {reason})` |
+| 以上均不满足 | 信任 domain_scanner 结果 | `检测结果: {original_domain}` |
+
+Override 后已匹配的领域提供 `search_context` 用于聚焦联网校准。
 
 Report detected domain(s) to the user: `检测到领域: AI 3D 生成`
 
