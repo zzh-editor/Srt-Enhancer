@@ -31,6 +31,7 @@ from pathlib import Path
 from apply_spacing import apply_spacing as _apply_spacing
 
 from refine_segments import refine as refine_segments
+from refine_segments import review as review_segments
 
 
 # ── Paths ──────────────────────────────────────────────────────────
@@ -58,12 +59,18 @@ DEFAULT_CONFIG = {
     "terminology_enabled": True,
     "ratio_format_enabled": True,
     "spacing_enabled": True,
+    "capitalization_enabled": True,
     "depunct_enabled": True,
     "singleline_enabled": True,
     "singleline_max_chars": 40,
     "terminology_overrides": {},   # {asr_text: correct_text}
+    "capitalization_overrides": {}, # {lowercase: StandardCasing}
     "punctuation_preserve": ["《》", "`", "$"],
     "dot_preserve": True,          # preserve . in file names/versions
+    "refine": {                    # passed to refine_segments.refine()
+        "max_chars": 30,
+        "comma_split": True,
+    },
 }
 
 
@@ -165,6 +172,98 @@ def load_terminology(path: Path = TERMINOLOGY_PATH) -> dict[str, str]:
     return mapping
 
 
+# ── ASR stutter fix ────────────────────────────────────────────────
+
+STUTTER_PATTERN = re.compile(
+    r'([\u4e00-\u9fff\u3400-\u4dbf])\1{2,}'    # 这这这, 那那那
+)
+STUTTER_WORD_PATTERN = re.compile(
+    r'\b([A-Za-z]+)(\s+\1\b){2,}',              # no no no, yes yes yes
+    re.IGNORECASE,
+)
+STUTTER_CJK_WORD_PATTERN = re.compile(
+    r'([\u4e00-\u9fff])(?:\s*\1){2,}'           # 不 不 不, 对 对 对
+)
+
+
+def _fix_stutter(text: str) -> str:
+    """Collapse stuttered/repeated characters and words."""
+    text = STUTTER_PATTERN.sub(r'\1', text)
+    text = STUTTER_WORD_PATTERN.sub(r'\1', text)
+    text = STUTTER_CJK_WORD_PATTERN.sub(r'\1', text)
+    return text
+
+
+# ── Capitalization loader ──────────────────────────────────────────
+
+def load_capitalization_table(path: Path = TERMINOLOGY_PATH) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+    """Load proper noun capitalization + case groups from correction-table.md '大小写校准' section.
+
+    Returns (cap_map, case_groups) where:
+      cap_map: lowercase → standard casing (generic, domain-independent)
+      case_groups: group_name → {lowercase → standard_casing} (domain-sensitive)
+    """
+    cap_map: dict[str, str] = {}
+    case_groups: dict[str, dict[str, str]] = {}
+    if not path.exists():
+        return cap_map, case_groups
+
+    with open(path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    current_section: str | None = None
+    current_subsection: str | None = None
+    in_cap_section = False
+    table_pattern = re.compile(r"^\|\s*(.+?)\s*\|\s*(.+?)\s*\|")
+
+    for line in lines:
+        stripped = line.strip()
+        # Detect sections
+        if stripped.startswith("## 大小写校准"):
+            in_cap_section = True
+            continue
+        if in_cap_section and stripped.startswith("## "):
+            in_cap_section = False
+            continue
+        if not in_cap_section:
+            continue
+
+        # Subsections: ### 专有名词大写 / ### 领域感知大小写组
+        if stripped.startswith("### "):
+            current_subsection = stripped[4:].strip()
+            continue
+
+        # Skip header rows
+        if "---" in stripped or stripped.startswith("| 小写"):
+            continue
+        if not stripped.startswith("|"):
+            continue
+
+        m = table_pattern.match(stripped)
+        if not m:
+            continue
+
+        if current_subsection and "专有名词" in current_subsection:
+            low = m.group(1).strip()
+            std = m.group(2).strip()
+            if low and std:
+                cap_map[low] = std
+        elif current_subsection and "领域" in current_subsection:
+            low = m.group(1).strip()
+            std = m.group(2).strip()
+            group_name = m.group(3).strip() if len(m.groups()) >= 3 else "generic"
+            if low and std:
+                case_groups.setdefault(group_name, {})[low] = std
+
+    # Generate Ctrl shortcut variants
+    for key_char in ('v', 'c', 'z', 's', 'a', 'x', 'p'):
+        upper = key_char.upper()
+        for variant in (f'ctrl+{key_char}', f'ctrl {key_char}', f'ctrl{key_char}'):
+            cap_map[variant] = f'Ctrl+{upper}'
+
+    return cap_map, case_groups
+
+
 # ── Step: de-filler ────────────────────────────────────────────────
 
 def _contains_any(text: str, words: list[str]) -> str | None:
@@ -188,6 +287,9 @@ def step_defiller(segments: list[dict], config: dict) -> list[dict]:
     for seg in segments:
         text = seg["text"]
         original = text
+
+        # ASR stutter: collapse repeated chars/words
+        text = _fix_stutter(text)
 
         # Remove hesitation sounds at start
         for f in fillers:
@@ -374,9 +476,59 @@ def step_spacing(segments: list[dict], config: dict) -> list[dict]:
         print("warning: apply_spacing module not found, skipping spacing",
               file=sys.stderr)
         return segments
-    domain = config.get("domain")
     for seg in segments:
-        seg["text"] = _do_spacing(seg["text"], domain=domain)
+        seg["text"] = _do_spacing(seg["text"])
+    return segments
+
+
+# ── Step: capitalization ───────────────────────────────────────────
+
+DOMAIN_CASE_GROUPS_MAP: dict[str, list[str]] = {
+    "general": ["generic_acronym", "os_term", "brand_tool", "file_format"],
+    "ai-3d": ["generic_acronym", "os_term", "brand_tool", "ai_3d", "file_format"],
+    "maya": ["generic_acronym", "os_term", "brand_tool", "ai_3d", "file_format"],
+    "python": ["generic_acronym", "os_term", "file_format"],
+    "gaming": ["generic_acronym", "os_term", "brand_tool", "file_format"],
+}
+DEFAULT_CASE_GROUPS = ["generic_acronym", "os_term", "file_format"]
+
+
+def step_capitalization(segments: list[dict], config: dict) -> list[dict]:
+    """Apply proper noun capitalization and domain-aware case normalization.
+
+    Loads from correction-table.md '大小写校准' section + AI overrides.
+    """
+    cap_map, case_groups = load_capitalization_table()
+
+    overrides = config.get("capitalization_overrides", {})
+    cap_map.update(overrides)
+
+    domain = config.get("domain")
+    group_names = DOMAIN_CASE_GROUPS_MAP.get(domain, DEFAULT_CASE_GROUPS) if domain else DEFAULT_CASE_GROUPS
+
+    combined: dict[str, str] = {}
+    # cap_map has highest priority (don't overwrite)
+    for k, v in cap_map.items():
+        combined[k] = v
+    # Then case groups (lower priority)
+    for name in group_names:
+        group = case_groups.get(name, {})
+        for k, v in group.items():
+            if k not in combined:
+                combined[k] = v
+
+    if not combined:
+        return segments
+
+    sorted_terms = sorted(combined, key=len, reverse=True)
+    pattern = re.compile(
+        '|'.join(r'\b' + re.escape(t) + r'\b' for t in sorted_terms),
+        re.IGNORECASE | re.ASCII,
+    )
+
+    for seg in segments:
+        seg["text"] = pattern.sub(lambda m: combined[m.group(0).lower()], seg["text"])
+
     return segments
 
 
@@ -495,7 +647,80 @@ def step_refine(segments: list[dict], config: dict) -> list[dict]:
     for seg in segments:
         seg["text"] = " ".join(seg["text"].split())
 
-    return refine_segments(segments)
+    refine_cfg = config.get("refine", {})
+    return refine_segments(segments, refine_cfg)
+
+
+# ── Step: post-refine merge ────────────────────────────────────────
+
+MERGE_PARTICLE_END = frozenset("的得地着了过在把被从对到跟让给为以向于与和或")
+
+def _should_merge(seg_a: dict, seg_b: dict, config: dict) -> bool:
+    """Determine if two consecutive segments should be merged."""
+    text_a = seg_a.get("text", "").strip()
+    text_b = seg_b.get("text", "").strip()
+    if not text_a or not text_b:
+        return True
+
+    dur_a = seg_a.get("end", 0) - seg_a.get("start", 0)
+    dur_b = seg_b.get("end", 0) - seg_b.get("start", 0)
+    gap = seg_b.get("start", 0) - seg_a.get("end", 0)
+    n_a, n_b = len(text_a), len(text_b)
+
+    # Empty or particle-only text_b: always merge
+    if n_b <= 2:
+        return True
+    if n_a <= 2 and dur_a < 1.0:
+        return True
+
+    # Sentence particle at end of A, text_b is short/sentence-continuation
+    if text_a and text_a[-1] in MERGE_PARTICLE_END and n_b < 6:
+        return True
+
+    # Direct character overlap at boundary (ASR cross-segment fragmentation)
+    max_overlap = min(n_a, n_b, 4)
+    if max_overlap >= 1:
+        for ol in range(max_overlap, 0, -1):
+            if text_a[-ol:] == text_b[:ol]:
+                return True
+
+    return False
+
+
+def _merge_texts(text_a: str, text_b: str) -> str:
+    """Merge two texts, removing any overlapping characters at the boundary.
+
+    E.g., "及时的" + "的去跟大家" → "及时的去跟大家" (single 的).
+    """
+    if not text_a or not text_b:
+        return text_a + text_b
+    max_overlap = min(len(text_a), len(text_b))
+    for overlap in range(max_overlap, 0, -1):
+        if text_a[-overlap:] == text_b[:overlap]:
+            return text_a + text_b[overlap:]
+    return text_a + text_b
+
+
+def merge_segments(segments: list[dict]) -> list[dict]:
+    """Merge consecutive segments that appear to be incorrectly split."""
+    if not segments:
+        return []
+
+    merged: list[dict] = [segments[0]]
+    for seg in segments[1:]:
+        last = merged[-1]
+        if _should_merge(last, seg, {}):
+            last["text"] = _merge_texts(last["text"], seg["text"])
+            last["end"] = seg["end"]
+        else:
+            merged.append(seg)
+
+    return merged
+
+
+def step_merge(segments: list[dict], config: dict) -> list[dict]:
+    """Post-refine merge pass: rejoin segments incorrectly split by ASR or refine."""
+    return merge_segments(segments)
 
 
 # ── Pipeline ───────────────────────────────────────────────────────
@@ -526,7 +751,9 @@ PIPELINE_STEPS = {
     "normalize": step_normalize,
     "terminology": step_terminology,
     "spacing": step_spacing,
+    "capitalization": step_capitalization,
     "refine": step_refine,
+    "merge": step_merge,
     "finalize": step_finalize,
     # Individual legacy names (backward compat via --steps/--skip)
     "defiller": step_defiller,
@@ -563,7 +790,7 @@ def check_casing(segments: list[dict]) -> None:
 
     Groups by lowercase form, reports terms with 2+ different casings.
     """
-    from apply_spacing import CASE_GROUPS, CAPITALIZATION_MAP
+    cap_map, case_groups = load_capitalization_table()
 
     # Collect all tokens
     variants: dict[str, set[str]] = collections.defaultdict(set)
@@ -574,11 +801,11 @@ def check_casing(segments: list[dict]) -> None:
                 continue
             variants[token.lower()].add(token)
 
-    # Build known casing from CAPITALIZATION_MAP + CASE_GROUPS
+    # Build known casing from cap_map + case_groups
     known: dict[str, str] = {}
-    for k, v in CAPITALIZATION_MAP.items():
+    for k, v in cap_map.items():
         known[k.lower()] = v
-    for group in CASE_GROUPS.values():
+    for group in case_groups.values():
         for k, v in group.items():
             if k not in known:
                 known[k] = v
@@ -625,7 +852,7 @@ def main():
                         help="language code (zh/en/ja/ko)")
     parser.add_argument("--domain", default=None,
                         help="domain: maya/python/gaming/ai-3d/substance/blender/unreal/houdini/zbrush/photoshop/general")
-    parser.add_argument("--steps", default="normalize,terminology,spacing,terminology,refine,finalize",
+    parser.add_argument("--steps", default="normalize,terminology,spacing,capitalization,terminology,refine,merge,finalize",
                         help="comma-separated pipeline steps to run")
     parser.add_argument("--skip", default=None,
                         help="comma-separated steps to skip")
@@ -635,6 +862,8 @@ def main():
                         help="parse and print steps without executing")
     parser.add_argument("--check-casing", action="store_true",
                         help="scan output for inconsistent English term casing")
+    parser.add_argument("--review", action="store_true",
+                        help="run static segment quality review after pipeline")
 
     args = parser.parse_args()
 
@@ -677,6 +906,15 @@ def main():
           file=sys.stderr)
 
     out = run_pipeline(segments, config, enabled)
+
+    if args.review:
+        print("segment quality review:", file=sys.stderr)
+        warnings = review_segments(out)
+        if warnings:
+            for w in warnings:
+                print(w, file=sys.stderr)
+        else:
+            print("  0 warnings", file=sys.stderr)
 
     if args.check_casing:
         print("casing consistency check:", file=sys.stderr)

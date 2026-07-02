@@ -664,6 +664,165 @@
 
 ---
 
+## 大小写校准
+
+### 专有名词大写（通用，不依赖领域）
+
+| 小写形式 | 标准写法 | 说明 |
+|---------|---------|------|
+| pcie | PCIe | Technical acronym |
+| gpu | GPU | Technical acronym |
+| cpu | CPU | Technical acronym |
+| api | API | Technical acronym |
+| sdk | SDK | Technical acronym |
+| ai | AI | Technical acronym |
+| html | HTML | Technical acronym |
+| css | CSS | Technical acronym |
+| js | JS | Technical acronym |
+| ts | TS | Technical acronym |
+| json | JSON | Technical acronym |
+| sql | SQL | Technical acronym |
+| http | HTTP | Technical acronym |
+| rest | REST | Technical acronym |
+| tcp | TCP | Technical acronym |
+| ip | IP | Technical acronym |
+| usb | USB | Technical acronym |
+| hdmi | HDMI | Technical acronym |
+| ssd | SSD | Technical acronym |
+| hdd | HDD | Technical acronym |
+| ram | RAM | Technical acronym |
+| vram | VRAM | Technical acronym |
+| dns | DNS | Technical acronym |
+| dhcp | DHCP | Technical acronym |
+| ftp | FTP | Technical acronym |
+| ssh | SSH | Technical acronym |
+| ssl | SSL | Technical acronym |
+| tls | TLS | Technical acronym |
+| png | PNG | Technical acronym |
+| jpeg | JPEG | Technical acronym |
+| gif | GIF | Technical acronym |
+| svg | SVG | Technical acronym |
+| xml | XML | Technical acronym |
+| yaml | YAML | Technical acronym |
+| toml | TOML | Technical acronym |
+| cli | CLI | Technical acronym |
+| gui | GUI | Technical acronym |
+| ui | UI | Technical acronym |
+| ux | UX | Technical acronym |
+| ide | IDE | Technical acronym |
+| db | DB | Technical acronym |
+| vm | VM | Technical acronym |
+| os | OS | Technical acronym |
+| bios | BIOS | Technical acronym |
+| ue5 | UE5 | Domain-specific acronym |
+| ps | PS | Domain-specific acronym |
+| hdr | HDR | Domain-specific acronym |
+| pureref | PureRef | Brand/tool name |
+| perforce | Perforce | Brand/tool name |
+| tapnow | TapNow | Brand/tool name |
+| claude | Claude | Brand/tool name |
+| maya | Maya | Brand/tool name |
+| blender | Blender | Brand/tool name |
+| photoshop | Photoshop | Brand/tool name |
+| xcode | Xcode | Brand/tool name |
+| github | GitHub | Brand/tool name |
+| nanite | Nanite | Brand/tool name |
+| lumen | Lumen | Brand/tool name |
+| megascans | Megascans | Brand/tool name |
+| rookies | Rookies | Discipline-specific |
+| lightbox | LightBox | Discipline-specific |
+| overwatch | Overwatch | Discipline-specific |
+| keyframe | Keyframe | Discipline-specific |
+| playblast | Playblast | Discipline-specific |
+| hypergraph | Hypergraph | Discipline-specific |
+| hypershade | Hypershade | Discipline-specific |
+| unreal engine | Unreal Engine | Multi-word term |
+| tripo 3d ai | Tripo 3D AI | Multi-word term |
+| concept artist | Concept Artist | Multi-word term |
+| world partition | World Partition | Multi-word term |
+| concept art | Concept Art | Multi-word term |
+| art center | Art Center | Multi-word term |
+| paint over | Paint Over | Multi-word term |
+
+### 领域感知大小写组（按领域组激活）
+
+| 小写形式 | 标准写法 | 领域组 | 说明 |
+|---------|---------|--------|------|
+| obj | obj | file_format | File extension |
+| fbx | fbx | file_format | File extension |
+| gltf | gltf | file_format | File extension |
+| glb | glb | file_format | File extension |
+| usd | usd | file_format | File extension |
+| usdz | usdz | file_format | File extension |
+| dae | dae | file_format | File extension |
+| stl | stl | file_format | File extension |
+| abc | abc | file_format | File extension |
+| ma | ma | file_format | File extension |
+| mb | mb | file_format | File extension |
+| exr | exr | file_format | File extension |
+| tga | tga | file_format | File extension |
+| tiff | tiff | file_format | File extension |
+| bmp | bmp | file_format | File extension |
+| psd | psd | file_format | File extension |
+| webp | webp | file_format | File extension |
+| wav | wav | file_format | File extension |
+| mp3 | mp3 | file_format | File extension |
+| mp4 | mp4 | file_format | File extension |
+| mov | mov | file_format | File extension |
+| avi | avi | file_format | File extension |
+| mxf | mxf | file_format | File extension |
+| iges | iges | file_format | File extension |
+| step | step | file_format | File extension |
+| pbr | PBR | generic_acronym | Shading/standard term |
+| lod | LOD | generic_acronym | Level of Detail |
+| uv | UV | generic_acronym | UV coordinate |
+| nx | NX | generic_acronym | Normal X |
+| fov | FOV | generic_acronym | Field of View |
+| dof | DOF | generic_acronym | Depth of Field |
+| sss | SSS | generic_acronym | Subsurface Scattering |
+| ldr | LDR | generic_acronym | Low Dynamic Range |
+| sdr | SDR | generic_acronym | Standard Dynamic Range |
+| sbsar | SBSAR | generic_acronym | Substance package format |
+| sbs | SBS | generic_acronym | Substance graph format |
+| nd | ND | generic_acronym | Normal Direction |
+| ae | AE | generic_acronym | After Effects |
+| pr | PR | generic_acronym | Premiere Pro |
+| bake | Bake | generic_acronym | Baking process |
+| unfold | Unfold | generic_acronym | UV unfolding |
+| macos | macOS | os_term | Apple OS |
+| ios | iOS | os_term | Apple mobile OS |
+| ipados | iPadOS | os_term | Apple tablet OS |
+| watchos | watchOS | os_term | Apple watch OS |
+| tvos | tvOS | os_term | Apple TV OS |
+| windows | Windows | os_term | Microsoft OS |
+| linux | Linux | os_term | Open-source OS |
+| android | Android | os_term | Google mobile OS |
+| substance | Substance | brand_tool | Substance 3D suite |
+| painter | Painter | brand_tool | Substance 3D Painter |
+| designer | Designer | brand_tool | Substance 3D Designer |
+| sampler | Sampler | brand_tool | Substance 3D Sampler |
+| zbrush | ZBrush | brand_tool | Digital sculpting |
+| marmoset | Marmoset | brand_tool | Marmoset Toolbag |
+| toolbag | Toolbag | brand_tool | Marmoset Toolbag |
+| speedtree | SpeedTree | brand_tool | Procedural vegetation |
+| world machine | World Machine | brand_tool | Terrain generation |
+| gaea | Gaea | brand_tool | Terrain generation |
+| unreal | Unreal | brand_tool | Unreal Engine |
+| unity | Unity | brand_tool | Unity Engine |
+| godot | Godot | brand_tool | Godot Engine |
+| houdini | Houdini | brand_tool | Houdini FX |
+| nuke | Nuke | brand_tool | Compositing |
+| fusion | Fusion | brand_tool | Compositing |
+| rodin | Rodin | ai_3d | AI 3D generation |
+| tripo | Tripo | ai_3d | AI 3D generation |
+| meshy | Meshy | ai_3d | AI 3D generation |
+| gen | Gen | ai_3d | Generation model |
+| legacy | Legacy | ai_3d | Legacy model |
+| native | Native | ai_3d | Native model |
+| point | Point | ai_3d | Point cloud |
+
+---
+
 ## 使用说明
 
 ### 在字幕优化中的应用
@@ -752,3 +911,19 @@
 | PBI | PBR | 单处遗漏；用户确认修正 |
 | 偏激的格式 | PNG 格式 | 发音相似；用户确认修正 |
 | 循环5（非 Maya 语境） | 虚幻5 | 单处"循环5→虚幻5"在材质语境中；用户确认修正 |
+| 瓦那 | 华纳 | Warner Bros 发音相似；用户确认修正 |
+| 霍格沃兹之一 | 霍格沃兹之遗 | Hogwarts Legacy 发音不完整；用户确认修正 |
+| 物气 | 雾气 | 同音字混淆；用户确认修正 |
+| 阻次 | 层次 | 发音相似；用户确认修正 |
+| 插线 | 插件 | 发音相似；用户确认修正 |
+| 地边 / DBN / DBA | 地编 | 场景地编 Level Design；用户确认修正 |
+| Titan光 | 天光 | Skylight ASR 错误；用户确认修正 |
+| lex | lux | 光照单位 lux；用户确认修正 |
+| eve | EV | 曝光值 EV；用户确认修正 |
+| Retracing Shadow | Ray Tracing Shadow | 光线追踪阴影；用户确认修正 |
+| Post-Positive Volume | Post Process Volume | 后处理体积；用户确认修正 |
+| 丁达尔效果 / 叮答儿 | 丁达尔效应 | Tyndall effect；用户确认修正 |
+| color nuts | Color LUTs | 调色 LUT；用户确认修正 |
+| 蓝推街 | 蓝图 | Blueprint 发音相似；用户确认修正 |
+| 调成雷 | 调为0 | 数值归零，发音相似；用户确认修正 |
+| 打分器 | 达芬奇 | DaVinci Resolve；用户确认修正 |

@@ -4,10 +4,10 @@ Refine SRT segments using multi-level cascading semantic split rules.
 
 Pipeline:
   1. Clean empty / zero-duration / duplicate segments from upstream ASR
-  2. For each segment, find candidate split positions across 6 confidence levels
-  3. Recursively split at balanced positions, proportionally allocate time
+   2. For each segment, find candidate split positions across 6 confidence levels
+   3. Recursively split at balanced positions, proportionally allocate time
 
-No punctuation dependency — split purely on semantic/contextual cues.
+Multi-level split: semantic markers → commas → sentence punctuation → length fallback.
 
 Usage:
     python3 scripts/refine_segments.py <input.srt> [output.srt]
@@ -17,6 +17,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
+from typing import Optional
 
 
 # ── Constants ────────────────────────────────────────────────────────
@@ -26,6 +27,8 @@ STRONG_CONJUNCTIONS = [
     "而且", "并且", "那如果", "那这样", "那就",
     # 新增：然后 是教学口语最高频话题转接词
     "然后",
+    # 新增：因果/列举高频词
+    "因为", "包括",
 ]
 
 DISCOURSE_MARKERS = [
@@ -39,6 +42,8 @@ DISCOURSE_MARKERS = [
     "简单来说", "一般来讲", "换句话说",
     # 新增：教学演示引入语
     "我们来", "我们再来", "来看一下",
+    # 新增：列举/话题引入
+    "无论是", "还是", "就是",
 ]
 
 TEMP_MARKERS = [
@@ -220,8 +225,12 @@ def _find_response_topic_splits(text: str) -> list[int]:
     return splits
 
 
-def _find_split_points(text: str) -> tuple[list[int], list[int]]:
+def _find_split_points(text: str, config: Optional[dict] = None) -> tuple[list[int], list[int]]:
     """Return (strong_split_positions, all_split_positions) sorted."""
+    if config is None:
+        config = {}
+    comma_split = config.get("comma_split", True)
+
     strong = set()
     all_pts = set()
 
@@ -309,6 +318,26 @@ def _find_split_points(text: str) -> tuple[list[int], list[int]]:
                 if _is_split_viable(text, orig_pos):
                     all_pts.add(orig_pos)
 
+    # Level 9: Sentence-ending punctuation (STRONG)
+    for sep in "。？！；":
+        idx = text.find(sep, 1)
+        while idx > 0:
+            # 句末标点后一个字符开始算新句
+            after = idx + 1
+            if after < n and _is_split_viable(text, after):
+                strong.add(after)
+                all_pts.add(after)
+            idx = text.find(sep, idx + 1)
+
+    # Level 10: Comma (WEAK) — always enabled
+    if comma_split:
+        for comma in "，,":
+            idx = text.find(comma, 1)
+            while idx > 0:
+                if _is_split_viable(text, idx):
+                    all_pts.add(idx)
+                idx = text.find(comma, idx + 1)
+
     min_left = 1
     min_right = 2
     strong_sorted = sorted(p for p in strong if min_left <= p <= n - min_right)
@@ -329,16 +358,48 @@ def _score_split(text: str, pos: int, text_len: int) -> float:
     return 0
 
 
-def _split_recursive(seg: dict) -> list[dict]:
+def _split_recursive(seg: dict, config: Optional[dict] = None) -> list[dict]:
     """Recursively split segment at semantic split points."""
+    if config is None:
+        config = {}
+    max_chars = config.get("max_chars", 30)
+
     text = seg["text"].strip()
     if not text:
         return [seg]
 
     text_len = len(text)
-    strong_pts, all_pts = _find_split_points(text)
+    strong_pts, all_pts = _find_split_points(text, config)
 
     candidates = list(strong_pts) if strong_pts else list(all_pts)
+
+    # Fallback: length-based comma midpoint split
+    if not candidates and text_len > max_chars:
+        # Try comma first
+        for comma in "，,":
+            if comma in text:
+                commas = [i for i, c in enumerate(text) if c == comma]
+                mid = text_len // 2
+                best = min(commas, key=lambda p: abs(p - mid))
+                if _is_split_viable(text, best):
+                    candidates = [best]
+                    break
+        # Try 的/在 boundary at midpoint
+        if not candidates:
+            for marker in "在是就与和":
+                positions = [i for i, c in enumerate(text) if c == marker and 1 < i < text_len - 1]
+                if positions:
+                    mid = text_len // 2
+                    best = min(positions, key=lambda p: abs(p - mid))
+                    if _is_split_viable(text, best):
+                        candidates = [best]
+                        break
+        # Absolute fallback: split at character midpoint
+        if not candidates:
+            mid = text_len // 2
+            if mid > 5 and mid < text_len - 5:
+                # Round to nearest word boundary (next space or CJK char)
+                candidates = [mid]
     if not candidates:
         return [seg]
 
@@ -371,8 +432,8 @@ def _split_recursive(seg: dict) -> list[dict]:
     right_seg = {"text": right_text, "start": split_time, "end": seg["end"]}
 
     result = []
-    result.extend(_split_recursive(left_seg))
-    result.extend(_split_recursive(right_seg))
+    result.extend(_split_recursive(left_seg, config))
+    result.extend(_split_recursive(right_seg, config))
     return result
 
 
@@ -403,7 +464,7 @@ def _clean_segments(segments: list[dict]) -> list[dict]:
 
 # ── Main refine pipeline ────────────────────────────────────────────
 
-def refine(segments: list[dict]) -> list[dict]:
+def refine(segments: list[dict], config: Optional[dict] = None) -> list[dict]:
     if not segments:
         return []
 
@@ -411,10 +472,49 @@ def refine(segments: list[dict]) -> list[dict]:
 
     split_segs = []
     for seg in segments:
-        sub = _split_recursive(seg)
+        sub = _split_recursive(seg, config)
         split_segs.extend(sub)
 
     return split_segs
+
+
+# ── Post-enhance review ─────────────────────────────────────────────
+
+def review(segments: list[dict]) -> list[str]:
+    """
+    Static analysis of segment quality after refine.
+
+    Returns a list of warning strings (empty = no issues).
+    """
+    warnings: list[str] = []
+    for i, seg in enumerate(segments):
+        text = seg["text"]
+        tlen = len(text)
+        dur = seg.get("end", 0) - seg.get("start", 0)
+
+        if tlen > 35:
+            warnings.append(
+                f"  #{i+1}: {tlen}字 / {dur:.1f}s — 建议拆分"
+                f" ({text[:40]}...)"
+            )
+        elif dur > 10:
+            warnings.append(
+                f"  #{i+1}: {tlen}字 / {dur:.1f}s — 时长过长"
+            )
+        # 检查连续逗号（本应拆分但没拆）
+        if "，" in text and tlen > 20:
+            warnings.append(
+                f"  #{i+1}: 含逗号未拆分 ({tlen}字)"
+            )
+
+        # 短段警告：≤3字且时长<1s，可能是ASR碎片
+        short_dur = dur < 1.0 and tlen <= 3
+        if short_dur and tlen >= 1:
+            warnings.append(
+                f"  #{i+1}: 短段 ({tlen}字 / {dur:.1f}s) — 可能为 ASR 碎片"
+            )
+
+    return warnings
 
 
 # ── CLI ─────────────────────────────────────────────────────────────
@@ -448,6 +548,15 @@ def main():
         f"refined {original_count} → {len(out)} segments → {output_path}",
         file=sys.stderr,
     )
+
+    # Review warnings
+    warnings = review(out)
+    if warnings:
+        print(f"\nreview ({len(warnings)} warnings):", file=sys.stderr)
+        for w in warnings:
+            print(w, file=sys.stderr)
+    else:
+        print("review: 0 warnings", file=sys.stderr)
 
 
 if __name__ == "__main__":
