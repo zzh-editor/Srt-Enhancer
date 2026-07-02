@@ -52,7 +52,7 @@ Use this skill when the user mentions or uploads files related to:
     - AI 上下文猜测 → 最低优先，标注 ❗
  5. **Hybrid AI + Script Execution**:
     - AI handles: language detection, web calibration (fallback), config preparation, result review
-    - **`scripts/enhance.py`** handles: deterministic pipeline execution (normalize → terminology → spacing → terminology → refine → finalize)
+    - **`scripts/enhance.py`** handles: deterministic pipeline execution (normalize → terminology → spacing → capitalization → terminology → refine → merge → finalize)
     - **`scripts/domain_scanner.py`** handles: domain detection (keyword scoring)
     - **`scripts/title_marker.py`** handles: game/media title marking
     - **`scripts/confidence_scorer.py`** handles: confidence scoring
@@ -123,7 +123,14 @@ Override 后已匹配的领域提供 `search_context` 用于聚焦联网校准�
 
 🔴 domain override 后联网校准仍无匹配 → 查 Failure Handling 表「domain override 后匹配领域仍不准确」
 
-Report detected domain(s) to the user: `检测到领域: AI 3D 生成`
+**🔴 CHECKPOINT · 🛑 STOP：** 将检测到的领域以对话正文报告用户，并用 Question 工具确认：
+- header: "领域检测确认"
+- options:
+  - label: "正确" → description: "领域匹配，继续进入 Config 构建"
+  - label: "不正确" → description: "手动指正领域，AI 修正后再进入下一步"
+- multiple: false
+
+用户回答前不得默认进入 Config 构建流程（超时或发无关消息不算回答）。
 
 ### 3. AI Prepares Config & Overrides
 
@@ -137,7 +144,16 @@ AI reads the input file, detects language, collects domain from `domain_scanner.
   "terminology_overrides": {
     "EK": "1K",
     "Tabernacle": "Templates"
-  }
+  },
+  "capitalization_overrides": {
+    "mytool": "MyTool"
+  },
+  "refine": {
+    "max_chars": 30,
+    "comma_split": true
+  },
+  "title_candidates": ["艾尔登法环", "霍格沃茨之遗"],
+  "split_avoid": ["的"]
 }
 ```
 
@@ -161,11 +177,20 @@ AI reads the input file, detects language, collects domain from `domain_scanner.
 
 This is the **only** heavy AI processing round in the pipeline.
 
-**🔴 CHECKPOINT · 🛑 STOP：** 执行 enhance.py 前将生成的 JSON config 展示给用户确认。确认项：
+**🔴 CHECKPOINT · 🛑 STOP：** 执行 enhance.py 前将生成的 JSON config 以 **markdown 代码块形式输出在对话正文**中，供用户确认。确认项：
 - `lang` 是否正确
 - `domain` 是否与实际内容匹配
 - `terminology_overrides` 中是否有误匹配
-- 是否要跳过 refine（如上游已断句）
+- `capitalization_overrides` 中是否有误匹配
+- `refine.max_chars` 断句阈值（默认 30 字）
+- 是否要跳过 refine（如上游已断句，加 `--skip refine`）
+
+展示后，用 Question 工具询问「以上配置是否正确？」：
+- header: "确认 Config"
+- options:
+  - label: "确认执行" → description: "配置无误，开始运行 enhance.py"
+  - label: "需要修改" → description: "手动指定调整项，修改后重新展示"
+- multiple: false
 
 用户确认后再进入下一步。
 
@@ -183,8 +208,10 @@ python3 scripts/enhance.py input.srt -o output_Enhancer.srt \
     --lang zh --domain maya+gaming \
     --overrides '{"Owatch":"Overwatch","R Center":"Art Center"}'
 
-# With full JSON config:
-python3 scripts/enhance.py input.srt -o output_Enhancer.srt --config my_config.json
+# With AI overrides (config from §3, no config file written to disk):
+python3 scripts/enhance.py input.srt -o output_Enhancer.srt \
+    --lang zh --domain maya \
+    --overrides '{"Owatch":"Overwatch","R Center":"Art Center"}'
 
 # Dry-run to inspect steps without modifying:
 python3 scripts/enhance.py input.srt --dry-run
@@ -200,20 +227,52 @@ python3 scripts/enhance.py input.srt --steps terminology,spacing
 
 | Step | CLI name | What it does |
 |------|----------|-------------|
-| 1 | `normalize` | Combined: defiller(去掉口癖) → de_de(的得地修正) → ratio_format(16比9 → 16:9) |
+| 1 | `normalize` | Combined: defiller(去掉口癖+ASR结巴) → de_de(的得地修正) → ratio_format(16比9 → 16:9) |
 | 2 | `terminology` | 第一轮术语替换：Apply ASR→correct mapping from `correction-table.md` + overrides, with fuzzy matching |
-| 3 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` (inlined, no subprocess overhead)，含 domain-aware casing |
-| 4 | `terminology` | 第二轮术语替换：spacing 过程中部分英文被规范化后，再次匹配 correction-table.md 中的复合术语（如 Image2 3D → Image To 3D） |
-| 5 | `refine` | Semantic segment refinement: cascading split (句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离) |
-| 6 | `finalize` | Combined: depunct(去标点, 保留`《》`和代码保护域) → hotkeys(标准化Ctrl+E等快捷键, 最后执行避免+被剥离) |
+| 3 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` (inlined, no subprocess overhead)，仅做空格，不再含大小写 |
+| 4 | `capitalization` | 专有名词大写 + 领域感知大小写归一化，从 `correction-table.md`「大小写校准」节加载，支持 AI overrides |
+| 5 | `terminology` | 第二轮术语替换：spacing + capitalization 后英文规范化后，再次匹配 correction-table.md 中的复合术语 |
+| 6 | `refine` | Semantic segment refinement: cascading split (句末标点/转折连词/话题标记/话语标记/时间状语/OK隔离)，**禁止「的」作为切点** |
+| 7 | `merge` | Post-refine merge pass：合并不当切分的连续段（跨段语法碎片/极短段/时间碎片/句末助词粘连） |
+| 8 | `finalize` | Combined: depunct(去标点, 保留`《》`和代码保护域) → hotkeys(标准化Ctrl+E等快捷键, 最后执行避免+被剥离) |
 
-> **关于双 terminology 轮次**：第二轮术语替换捕获 spacing 后英文规范化产生的复合术语（如 Image2 3D → Image To 3D）。仅当 ASR 输出包含中文语境中的英文复合术语时有效。若无此类内容，第二轮是空操作，不影响性能。
+> **关于双 terminology 轮次**：第二轮术语替换捕获 spacing + capitalization 后英文规范化产生的复合术语（如 Image2 3D → Image To 3D）。仅当 ASR 输出包含中文语境中的英文复合术语时有效。若无此类内容，第二轮是空操作，不影响性能。
 
-> **旧版 --steps 向后兼容：** `defiller,de_de,ratio_format,depunct,hotkeys` 等单步名称仍然可用。但推荐使用合并后的步骤名称。`terminology` 在 pipeline 中出现两次（step 2 和 step 4），--steps 默认值已包含双轮：`normalize,terminology,spacing,terminology,refine,finalize`。
+> **关于 Merge Pass**：ASR 常将完整句子跨段切分（如「及时的」+「的去跟大家」），refine 只能继续拆分而无法合并。新增 post-refine merge pass 根据时间间隔、段长、句末助词特征自动合并碎片段。
+
+> **旧版 --steps 向后兼容：** `defiller,de_de,ratio_format,depunct,hotkeys` 等单步名称仍然可用。但推荐使用合并后的步骤名称。`terminology` 在 pipeline 中出现两次（step 2 和 step 5），--steps 默认值：`normalize,terminology,spacing,capitalization,terminology,refine,merge,finalize`。
 
 > **关于 `--skip refine`**：如果上游流程（如 video-transcribe）已在转录后执行过语义断句，调用 srt-enhancer 时可通过 `--skip refine` 跳过此步骤，避免重复分割。
 
 🔴 脚本执行报错 → 查 Failure Handling 表「enhance.py 执行失败」
+
+### 4.5. Segment Quality Review (静态复核)
+
+Run segment quality analysis after the pipeline:
+
+```bash
+python3 scripts/enhance.py input.srt -o output_Enhancer.srt \
+    --lang zh --domain unreal \
+    --overrides '{"瓦那":"华纳","eve":"EV"}' --review
+```
+
+`--review` 输出示例：
+```
+segment quality review:
+  #16: 63字 — 建议拆分
+  #21: 60字 / 12.3s — 时长过长
+  0 warnings
+```
+
+**复核项：**
+| 检查维度 | 触发条件 | 说明 |
+|---------|---------|------|
+| 字数量 | >35 字 | 建议进一步拆分 |
+| 时长 | >10 秒 | 显示超长 |
+| 含逗号未拆 | 含 `，` 且 >20 字 | 逗号本应是切点 |
+| 空段 | 文本空 | ASR 残留 |
+
+AI 读取复核输出后在对话中向用户报告。复核不改文件，仅做质量提示。
 
 ### 5. AI Review & Title Marking
 
@@ -226,6 +285,12 @@ Run `scripts/title_marker.py` for known titles:
 cat output.srt | grep -v '^[0-9]*$' | grep -v '\-\->' | \
     python3 scripts/title_marker.py
 ```
+
+**AI systematic scan** (并行于 Config 阶段，不增加轮次)：
+
+在 §3 AI 构建 config 时，AI 需扫描输入全文，提取疑似作品名的 token（≥2个中文字或≥2个英文大写词），联网验证后：
+- 将确认的作品名写入 JSON config 的 `title_candidates` 数组
+- `title_marker.py` 执行后，AI 遍历 `title_candidates` 检查是否已加《》，未加则 override
 
 AI overrides only when **all** conditions met:
 - title_marker.py returned no match for a token
@@ -271,7 +336,15 @@ Assign a confidence score to every modification and present a diff table for use
 
 **Diff Output Format:**
 
-Diff 审核表仅在对话窗口中输出，不写入文件系统。用户确认后直接进入输出生成：
+Diff 审核表通过**对比原始 SRT 与增强后的 SRT**生成，直接在对话中输出 markdown 表格。User Review 确认前不写入文件系统。
+
+**分页规则：**
+- 总条数 ≤ 20：完整输出到对话
+- 总条数 > 20：对话输出**前 20 条** + `...还有 N 条修改，完整 diff 预览已写入...`
+- AI 将完整 diff 写入 `{输入目录}/{文件名}_diff_preview.md`
+- 对话中显示：`完整 diff 预览已写入: /path/to/raw1_diff_preview.md`
+
+输出格式：
 
 ```
 ## 修改预览 (Diff Review)
@@ -282,12 +355,12 @@ Diff 审核表仅在对话窗口中输出，不写入文件系统。用户确认
 | 5 | match case 工俱 | match case 工具 | 高(100%) | 错别字 |
 | 8 | Owatch 游戏 | Overwatch 游戏 | 高(90%) | 联网校准 |
 
-❗ = 需要用户确认
+❗ = 需要用户确认（完整修改列表共 12 条）
 ```
 
 **🔴 CHECKPOINT · 🛑 STOP User Review Workflow:**
-1. 呈现 Diff 审核表
-2. **用 Question 工具弹窗询问用户：**
+1. 将 Diff 审核表（或前 20 条 + 完整 diff 文件路径）以**对话正文 markdown 表格输出**，不使用 Question 弹窗展示数据
+2. **用 Question 工具弹窗询问用户最终确认：**
    - header: "确认修改"
    - options:
      - label: "全部确认" → description: "应用所有修改并生成输出文件"
@@ -295,8 +368,9 @@ Diff 审核表仅在对话窗口中输出，不写入文件系统。用户确认
      - label: "全部拒绝" → description: "不应用任何修改，直接退出"
    - multiple: false
 3. If user rejects specific items, revert those changes
-4. If user confirms, apply all changes and generate output
-5. **Persist user-confirmed corrections to `references/correction-table.md`** (§7 用户确认持久化)
+4. If user confirms → **删除临时 diff 文件**（如果存在），然后 apply all changes and generate output
+5. If user rejects all → **删除临时 diff 文件**（如果存在），告知用户「未应用任何修改」
+6. **Persist user-confirmed corrections to `references/correction-table.md`** (§7 用户确认持久化)
 
 ### 7. Generate Output File
 
@@ -304,9 +378,11 @@ Save the enhanced result after user confirmation of the diff review:
 - **SRT input** → `{原始文件名}_Enhancer.srt` (e.g., `input.srt` → `input_Enhancer.srt`)
 - **TXT input** → `{原始文件名}_Enhancer.txt` (e.g., `transcript.txt` → `transcript_Enhancer.txt`)
 - Output directory: **默认与原始文件同级目录**
+- **最终产出仅 `.srt`（或 `.txt`）文件，不产生任何中间文件**（config JSON、diff 预览等均不保留）
 - Apply all validated (user-confirmed) corrections
 - Include a summary of changes at the end of the output
-- Diff 审核表本身不写入文件系统，仅在对话窗口中呈现
+- **清理临时文件**：如果 §6 中创建了 `_diff_preview.md`，在确认或拒绝后将其删除
+- Diff 审核表本身不写入文件系统（临时 diff 预览文件除外，确认后即删除）
 
 ## Incremental Terminology Learning
 
@@ -355,8 +431,8 @@ When encountering a potentially incorrect term:
 
 ### Enhancement Checklist
 
-1. **AI Phase** (§3 Core Workflow) → detect domain → prepare config → 🔴 CHECKPOINT → execute enhance.py
-2. **enhance.py** (§4) → `normalize → terminology → spacing → terminology → refine → finalize` (zero AI)
+1. **AI Phase** (§3 Core Workflow) → detect domain → prepare config (含系统性作品名扫描) → 🔴 CHECKPOINT → execute enhance.py
+2. **enhance.py** (§4) → `normalize → terminology → spacing → capitalization → terminology → refine → merge → finalize` (zero AI)
 3. **AI Review** (§5-6) → title_marker.py → confidence_scorer.py → diff table → user confirm
 4. **Output** (§7) → write file → persist corrections to `correction-table.md`
 
@@ -391,10 +467,10 @@ When encountering a potentially incorrect term:
 
 **处理流程:**
 1. AI 检测语言(zh)、领域(Python)、联网校准 → 生成 JSON config
-2. `enhance.py --lang zh --domain python --steps normalize,terminology,spacing,terminology,refine,finalize`
+2. `enhance.py --lang zh --domain python --steps normalize,terminology,spacing,capitalization,terminology,refine,merge,finalize`
 3. AI 复核：书名号标记 → diff 审核 → 用户确认 → 持久化术语
 
-**输出到 `input_Enhancer.srt`:** 去口癖 `嗯`/`啊` → 的得地修正 + 比例格式 → Python 术语 → 混排(domain-aware casing) → 二次术语替换 → 断句 → 去标点 → 快捷键标准化
+**输出到 `input_Enhancer.srt`:** 去口癖+结巴 → 的得地修正 + 比例格式 → Python 术语 → 混排空格 → 大小写规范化 → 二次术语替换 → 断句(禁止「的」切点) → 合并碎片段 → 去标点 → 快捷键标准化
 
 See `references/example.md` for a complete worked example (input → processing steps → diff table → output).
 
@@ -408,14 +484,15 @@ See `references/example.md` for a complete worked example (input → processing 
 - Alter SRT structure or formatting (SRT only)
 - Remove grammatical particles (的, 了, 吗, etc.) that carry meaning
 - Apply low-confidence corrections without user approval
-- 将 diff 审核表写入文件系统（仅对话窗口输出）
+- 将 diff 审核表写入文件系统（临时 diff 预览文件除外，确认后删除）
 - 未经用户审核确认就写入字幕输出文件
+- 将中间 config JSON 写入文件系统（全量通过 `--overrides` CLI 参数传递）
 - **重复已经在 config 中配置好的 enhance.py 步骤**（AI 不应再次做 enhance.py 已完成的确定性工作）
 
 ### Must DO:
 - **对照表优先原则**：用户 overrides > correction-table.md > 领域感知联网搜索 > AI 上下文猜测
 - **Use AI for**: language detection, web calibration (table-unmatched only), config building, result review
-- **Use `scripts/enhance.py` for**: deterministic pipeline (normalize → terminology → spacing → terminology → refine → finalize)
+- **Use `scripts/enhance.py` for**: deterministic pipeline (normalize → terminology → spacing → capitalization → terminology → refine → merge → finalize)
 - **Use `scripts/domain_scanner.py` for**: domain detection (keyword scoring)
 - **Use `scripts/title_marker.py` for**: known game/film title marking
 - **Use `scripts/confidence_scorer.py` for**: deterministic confidence scoring
@@ -460,7 +537,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 | 标点去除后字幕变空 | 保留原始文本的骨干部分 | 保留原始并标记 `#punctuation_removed_failed` |
 | 游戏书名号标记过泛（误标工具名） | 撤销该条标记 | 保留不做书名号标记 |
 | 单行合并后超过 40 字无法拆分（无语义断点） | 在空格/标点处硬拆分 | 保持现状，标记 `#overflow` |
-| 用户拒绝所有修改 | 不输出增强文件，仅告知用户「未应用任何修改」 | — |
+| 用户拒绝所有修改 | 不输出增强文件，删除临时 diff 文件（如存在），仅告知用户「未应用任何修改」 | — |
 | 输出文件写入失败（权限/路径问题） | 提示用户并提供输出路径 | 将增强内容回退到对话窗口输出 |
 | 增量术语表冲突（session 表与静态表不一致） | session 表优先 | 在 diff 中展示两条记录供用户选择 |
 | enhance.py 执行失败（脚本报错/超时） | 回退到 AI 逐步骤处理（15-20 轮） | 记录错误日志，通知用户降级模式 |
@@ -476,8 +553,8 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 - **`references/mixed-typesetting.md`** - Complete specification for mixed-language typesetting
 
 ### Scripts
-- **`scripts/enhance.py`** - **Main enhancement pipeline.** Deterministic pipeline: normalize(去口癖+的得地+比例格式) → terminology → spacing → terminology(第二轮复合术语匹配) → refine → finalize(去标点+快捷键). Supports `--config`, `--steps`, `--skip`, `--overrides`, `--dry-run`, `--match-mode`.
-- **`scripts/apply_spacing.py`** - Deterministic CJK-Latin spacing tool. Called by enhance.py.
+- **`scripts/enhance.py`** - **Main enhancement pipeline.** Deterministic pipeline: normalize(去口癖+ASR结巴+的得地+比例格式) → terminology → spacing → capitalization(专名大写+领域感知大小写) → terminology → refine(禁止「的」切点) → merge(碎片合并) → finalize(去标点+快捷键). Supports `--config`, `--steps`, `--skip`, `--overrides`, `--dry-run`, `--match-mode`.
+- **`scripts/apply_spacing.py`** - Deterministic CJK-Latin spacing tool (仅空格, 不再含大小写). Called by enhance.py.
 - **`scripts/domain_scanner.py`** - Keyword-frequency domain detection. Usage: `cat text_lines | python3 domain_scanner.py`
 - **`scripts/confidence_scorer.py`** - Deterministic confidence scoring. Provides `score(source, sub_type)` → `(value, reason)`.
 - **`scripts/title_marker.py`** - Game/media title marking with 《》。Usage: `cat text_lines | python3 title_marker.py`
@@ -488,12 +565,19 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 ```
                     AI Phase (2-3 rounds)
  输入 SRT → 解析 → domain_scanner.py → 构建 JSON config
+ (含系统性作品名扫描 → title_candidates)
                     (对照表 > 静态表 > 联网搜索)
                          │
                          ▼
                 enhance.py (0 AI, fully deterministic)
-     normalize → terminology → spacing → terminology → refine → finalize
-     └ defiller+de_de+ratio_format              └ depunct+hotkeys
+     normalize → terminology → spacing → capitalization → terminology → refine → merge → finalize
+     └ defiller+de_de+ratio_format             └ depunct+hotkeys
+     └ ASR 结巴处理        └ 禁止「的」切点
+                         └ Merge Pass
+                         │
+                         ▼
+                Segment Quality Review (--review)
+              静态复核：字数量/时长/含逗号未拆/短段警告
                          │
                          ▼
                AI Review Phase (1-2 rounds)
