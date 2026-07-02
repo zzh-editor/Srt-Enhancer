@@ -192,7 +192,7 @@ This is the **only** heavy AI processing round in the pipeline.
   - label: "需要修改" → description: "手动指定调整项，修改后重新展示"
 - multiple: false
 
-用户确认后再进入下一步。
+用户回答前不得默认进入下一步（超时或发无关消息不算回答）。
 
 ### 4. Execute scripts/enhance.py
 
@@ -359,6 +359,9 @@ Diff 审核表通过**对比原始 SRT 与增强后的 SRT**生成，直接在�
 ```
 
 **🔴 CHECKPOINT · 🛑 STOP User Review Workflow:**
+
+用户回答前不得默认应用修改或退出（超时或发无关消息不算回答）。
+
 1. 将 Diff 审核表（或前 20 条 + 完整 diff 文件路径）以**对话正文 markdown 表格输出**，不使用 Question 弹窗展示数据
 2. **用 Question 工具弹窗询问用户最终确认：**
    - header: "确认修改"
