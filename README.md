@@ -1,8 +1,8 @@
 # SRT Enhancer
 
-字幕优化工具 — 去口癖、ASR 纠错、的/得/地修正、中西文混排空格、标点清理、专名大小写规范化、语义断句与碎片合并。
+字幕优化工具 — 去口癖、ASR 纠错、的/得/地修正、中西文混排空格、标点清理、专名大小写规范化。
 
-支持 11 领域自动检测（Maya/Python/Gaming/AI-3D 等），8 步确定性流水线 + AI 审核，生成 diff 对比表供确认后输出。
+支持 11 领域自动检测（Maya/Python/Gaming/AI-3D 等），6 步确定性流水线 + AI 审核，生成 diff 对比表供确认后输出。
 
 在支持 Agent Skills 的 CLI 中，说「优化字幕」+ 文件路径即可自动调用。
 
@@ -16,7 +16,7 @@ npx skills@latest install https://github.com/zzh-editor/Srt-Enhancer
 
 ```
 用户：优化这个字幕 meeting.srt
-Agent：检测领域 → 构建配置 → 执行 8 步流水线 → 生成 diff 审核表
+Agent：检测领域 → 构建配置 → 执行 6 步流水线 → 生成 diff 审核表
        用户确认 → 写入 meeting_Enhancer.srt
 ```
 
@@ -63,8 +63,6 @@ Agent：检测领域 → 构建配置 → 执行 8 步流水线 → 生成 diff 
 | spacing | CJK-Latin 混排空格，专名保护 |
 | capitalization | 专名大小写 + 领域感知大小写组 |
 | terminology（第二轮） | 复合术语二次匹配 |
-| refine | 语义断句，8 级级联切割，禁止「的」作切点 |
-| merge | 碎片合并：重叠字/极短段/句末助词粘连 |
 | finalize | 去标点 + 快捷键标准化 |
 
 默认 pipeline 包含双轮 terminology，仅在 spacing + capitalization 后英文规范化产生复合术语时生效。
@@ -81,7 +79,7 @@ Agent：检测领域 → 构建配置 → 执行 8 步流水线 → 生成 diff 
 
 ```
 srt-enhancer/
-├── scripts/          # 8 个可执行脚本
+├── scripts/          # 7 个可执行脚本
 ├── references/       # 术语表、大小写校准、领域定义
 ├── SKILL.md          # Agent skill 定义
 └── README.md
