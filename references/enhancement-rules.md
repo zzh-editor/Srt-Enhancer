@@ -355,7 +355,7 @@ For each potential enhancement:
 
 ### Post-Enhancement Validation
 
-- [ ] Output file is `{源文件名}_Enhancer.srt` 或 `{源文件名}_Enhancer.txt`
+- [ ] Output file is `{源文件名}_Enhancer.srt`
 - [ ] Subtitle count matches original
 - [ ] All timestamps identical to original
 - [ ] No double spaces introduced

@@ -15,8 +15,7 @@ Steps (applied in order, all optional):
   2. normalize    Text normalization: defiller(去口癖) → de_de(的得地) → ratio_format(16比9→16:9)
   3. terminology  ASR term replacement (from correction-table.md + overrides)
   4. spacing      CJK-Latin spacing (inlined, no subprocess)
-  5. refine       Semantic segment refinement (cascading split only, no merge)
-  6. finalize     depunct(去标点) → hotkeys(Ctrl+E 标准化), kept last to avoid + stripping
+   5. finalize     depunct(去标点) → hotkeys(Ctrl+E 标准化), kept last to avoid + stripping
   7. write        Write output SRT
 """
 
@@ -29,10 +28,6 @@ import re
 import sys
 from pathlib import Path
 from apply_spacing import apply_spacing as _apply_spacing
-
-from refine_segments import refine as refine_segments
-from refine_segments import review as review_segments
-
 
 # ── Paths ──────────────────────────────────────────────────────────
 
@@ -67,10 +62,6 @@ DEFAULT_CONFIG = {
     "capitalization_overrides": {}, # {lowercase: StandardCasing}
     "punctuation_preserve": ["《》", "`", "$"],
     "dot_preserve": True,          # preserve . in file names/versions
-    "refine": {                    # passed to refine_segments.refine()
-        "max_chars": 30,
-        "comma_split": True,
-    },
 }
 
 
@@ -583,10 +574,11 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
                 placeholder = f"\x00PROTECT_CODE_{i}\x00"
                 text = re.sub(r"`[^`]+`", lambda m, ph=placeholder: ph, text)
 
-        # Remove punctuation (but preserve . in numbers/URLs)
-        text = punct_re.sub("", text)
+        # Replace punctuation with space (mid-line) or delete (trailing)
+        text = punct_re.sub(" ", text)
         if config.get("dot_preserve", True):
-            text = dot_re.sub("", text)
+            text = dot_re.sub(" ", text)
+        text = re.sub(r'[ \t]+', ' ', text)
 
         # Fix CJK-Latin boundaries exposed by punctuation removal
         text = re.sub(
@@ -643,95 +635,12 @@ def step_hotkeys(segments: list[dict], config: dict) -> list[dict]:
 
 # ── Step: semantic segment refinement ──────────────────────────────
 
-def step_refine(segments: list[dict], config: dict) -> list[dict]:
-    for seg in segments:
-        seg["text"] = " ".join(seg["text"].split())
 
-    refine_cfg = config.get("refine", {})
-    return refine_segments(segments, refine_cfg)
-
-
-# ── Step: post-refine merge ────────────────────────────────────────
-
-MERGE_PARTICLE_END = frozenset("的得地着了过在把被从对到跟让给为以向于与和或")
-
-def _should_merge(seg_a: dict, seg_b: dict, config: dict) -> bool:
-    """Determine if two consecutive segments should be merged."""
-    text_a = seg_a.get("text", "").strip()
-    text_b = seg_b.get("text", "").strip()
-    if not text_a or not text_b:
-        return True
-
-    dur_a = seg_a.get("end", 0) - seg_a.get("start", 0)
-    dur_b = seg_b.get("end", 0) - seg_b.get("start", 0)
-    gap = seg_b.get("start", 0) - seg_a.get("end", 0)
-    n_a, n_b = len(text_a), len(text_b)
-
-    # Empty or particle-only text_b: always merge
-    if n_b <= 2:
-        return True
-    if n_a <= 2 and dur_a < 1.0:
-        return True
-
-    # Sentence particle at end of A, text_b is short/sentence-continuation
-    if text_a and text_a[-1] in MERGE_PARTICLE_END and n_b < 6:
-        return True
-
-    # Direct character overlap at boundary (ASR cross-segment fragmentation)
-    max_overlap = min(n_a, n_b, 4)
-    if max_overlap >= 1:
-        for ol in range(max_overlap, 0, -1):
-            if text_a[-ol:] == text_b[:ol]:
-                return True
-
-    return False
-
-
-def _merge_texts(text_a: str, text_b: str) -> str:
-    """Merge two texts, removing any overlapping characters at the boundary.
-
-    E.g., "及时的" + "的去跟大家" → "及时的去跟大家" (single 的).
-    """
-    if not text_a or not text_b:
-        return text_a + text_b
-    max_overlap = min(len(text_a), len(text_b))
-    for overlap in range(max_overlap, 0, -1):
-        if text_a[-overlap:] == text_b[:overlap]:
-            return text_a + text_b[overlap:]
-    return text_a + text_b
-
-
-def merge_segments(segments: list[dict]) -> list[dict]:
-    """Merge consecutive segments that appear to be incorrectly split."""
-    if not segments:
-        return []
-
-    merged: list[dict] = [segments[0]]
-    for seg in segments[1:]:
-        last = merged[-1]
-        if _should_merge(last, seg, {}):
-            last["text"] = _merge_texts(last["text"], seg["text"])
-            last["end"] = seg["end"]
-        else:
-            merged.append(seg)
-
-    return merged
-
-
-def step_merge(segments: list[dict], config: dict) -> list[dict]:
-    """Post-refine merge pass: rejoin segments incorrectly split by ASR or refine."""
-    return merge_segments(segments)
 
 
 # ── Pipeline ───────────────────────────────────────────────────────
 
-# Forward-compat: the old 8-step names still work via --steps
-# Merged under the hood into 5 efficient steps:
-#   normalize   = defiller → de_de → ratio_format
-#   terminology = terminology (unchanged)
-#   spacing     = spacing (inlined, no subprocess)
-#   refine      = refine (unchanged)
-#   finalize    = depunct → hotkeys
+# Legacy single-step names (defiller, de_de, etc.) still work via --steps
 
 def step_normalize(segments: list[dict], config: dict) -> list[dict]:
     segments = step_defiller(segments, config)
@@ -747,15 +656,11 @@ def step_finalize(segments: list[dict], config: dict) -> list[dict]:
 
 
 PIPELINE_STEPS = {
-    # Merged steps (preferred — default pipeline)
     "normalize": step_normalize,
     "terminology": step_terminology,
     "spacing": step_spacing,
     "capitalization": step_capitalization,
-    "refine": step_refine,
-    "merge": step_merge,
     "finalize": step_finalize,
-    # Individual legacy names (backward compat via --steps/--skip)
     "defiller": step_defiller,
     "de_de": step_de_de,
     "ratio_format": step_ratio_format,
@@ -852,7 +757,7 @@ def main():
                         help="language code (zh/en/ja/ko)")
     parser.add_argument("--domain", default=None,
                         help="domain: maya/python/gaming/ai-3d/substance/blender/unreal/houdini/zbrush/photoshop/general")
-    parser.add_argument("--steps", default="normalize,terminology,spacing,capitalization,terminology,refine,merge,finalize",
+    parser.add_argument("--steps", default="normalize,terminology,spacing,capitalization,terminology,finalize",
                         help="comma-separated pipeline steps to run")
     parser.add_argument("--skip", default=None,
                         help="comma-separated steps to skip")
@@ -862,8 +767,6 @@ def main():
                         help="parse and print steps without executing")
     parser.add_argument("--check-casing", action="store_true",
                         help="scan output for inconsistent English term casing")
-    parser.add_argument("--review", action="store_true",
-                        help="run static segment quality review after pipeline")
 
     args = parser.parse_args()
 
@@ -906,15 +809,6 @@ def main():
           file=sys.stderr)
 
     out = run_pipeline(segments, config, enabled)
-
-    if args.review:
-        print("segment quality review:", file=sys.stderr)
-        warnings = review_segments(out)
-        if warnings:
-            for w in warnings:
-                print(w, file=sys.stderr)
-        else:
-            print("  0 warnings", file=sys.stderr)
 
     if args.check_casing:
         print("casing consistency check:", file=sys.stderr)

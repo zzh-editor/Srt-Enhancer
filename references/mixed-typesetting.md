@@ -1,6 +1,6 @@
 # Mixed-Language Typesetting Specification
 
-Complete reference for applying consistent mixed-language typesetting in SRT/TXT subtitle output.
+Complete reference for applying consistent mixed-language typesetting in SRT subtitle output.
 
 **Version**: 1.0.0
 **Applied**: After ASR calibration, before punctuation removal
