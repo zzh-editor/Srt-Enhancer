@@ -531,16 +531,9 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
     for p in preserve:
         preserve_chars.update(p)
 
-    punct_re = re.compile(
-        "["
-        "\u3000-\u303f"    # CJK punctuation
-        "\uff00-\uffef"    # Fullwidth
-        "\\!\"#\\$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`\\{|\\}~"  # ASCII
-        "]+"
-    )
-
     dot_re = re.compile(r"(?<!\d)\.(?!\d|com|net|org|edu|cn|io|ai|app|dev)")
-    colon_re = re.compile(r"(?<!\d):(?!\d)")
+    CJK = r'[\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef\u3000-\u303f]'
+    PUNCT = r'[\u3000-\u303f\uff00-\uffef!"#$%&\'()*+,\-./:;<=>?@\[\\\]^_`{|}~]+'
 
     for seg in segments:
         text = seg["text"]
@@ -563,6 +556,10 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
         PCT_PH = "PROTECTPCT"
         text = re.sub(r'(\d)%', rf'\1{PCT_PH}', text)
 
+        # Protect patterns like C++, C#, Q&A
+        PLUS_PH = "PROTECTPLUS"
+        text = re.sub(r'(\w)\+\+', rf'\1{PLUS_PH}', text)
+
         for i, p in enumerate(preserve):
             if len(p) == 2:  # paired like 《》
                 placeholder = f"\x00PROTECT_PAIR_{i}\x00"
@@ -574,8 +571,10 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
                 placeholder = f"\x00PROTECT_CODE_{i}\x00"
                 text = re.sub(r"`[^`]+`", lambda m, ph=placeholder: ph, text)
 
-        # Replace punctuation with space (mid-line) or delete (trailing)
-        text = punct_re.sub(" ", text)
+        # Replace punctuation only when adjacent to CJK characters
+        # (?<![a-zA-Z0-9]) guards protect patterns like A/B, C#, 10.000 between Latin/digits
+        text = re.sub(rf'({CJK})({PUNCT})', r'\1 ', text)
+        text = re.sub(rf'(?<![a-zA-Z0-9])({PUNCT})({CJK})', r' \2', text)
         if config.get("dot_preserve", True):
             text = dot_re.sub(" ", text)
         text = re.sub(r'[ \t]+', ' ', text)
@@ -594,6 +593,7 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
         text = text.replace("PROTECTCOLON", ":")
         text = text.replace("PROTECTDOT", ".")
         text = text.replace("PROTECTPCT", "%")
+        text = text.replace("PROTECTPLUS", "++")
         for placeholder, orig in protected:
             if len(orig) == 2:
                 pattern_ph = re.escape(placeholder)

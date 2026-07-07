@@ -296,7 +296,27 @@ Assign a confidence score to every modification and present a diff table for use
 
 **Diff Output Format:**
 
-Diff 审核表通过**对比原始 SRT 与增强后的 SRT**生成，直接在对话中输出 markdown 表格。User Review 确认前不写入文件系统。
+比对原始 SRT 与增强后的 SRT 时，**仅比对文本行**，跳过序号行和时间轴行（重写 SRT 时时间戳有 ±1ms 浮点误差，逐行 `diff` 会产生大量噪声）：
+
+```bash
+python3 << 'PYEOF'
+import re
+
+def text_lines(path):
+    with open(path) as f:
+        return re.findall(r'\d+\n[\d:,.]+\s*-->\s*[\d:,.]+\n(.+?)(?=\n\n|\Z)', f.read(), re.S)
+
+orig = text_lines('{原始SRT}')
+enh  = text_lines('{增强后SRT}')
+
+for i, (o, e) in enumerate(zip(orig, enh)):
+    o, e = o.strip(), e.strip()
+    if o and o != e:
+        print(f"#{i+1}\n- {o}\n+ {e}\n")
+PYEOF
+```
+
+仅当文本行不同时才记录为 diff 条目。User Review 确认前不写入文件系统。
 
 **分页规则：**
 - 总条数 ≤ 20：完整输出到对话
