@@ -940,3 +940,49 @@
 | 村上村树 | 村上春树 | Haruki Murakami 日本作家；联网校准确认 |
 | 金安亮 | 金安岚 | 语境一致性修正（与前文金安岚统一） |
 | 月晚 | 明亮的夜晚 | 崔恩荣韩国小说；联网校准确认 |
+
+---
+
+## 用户确认修正（Maya/刚体物理录播课）
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| OLA / Ola method / orla method | Euler / Euler method | 欧拉积分法；Euler 发音 ASR 误识别 |
+| semi-implicit OLA / Semi-Implaced OLA | semi-implicit Euler | 半隐式欧拉积分 |
+| Overline Integrator | Euler Integrator | 欧拉积分器误识别 |
+| stevenness / stickness | stiffness | 刚度（弹簧系数） |
+| gigaboint / gigaboint update | jiggle joint / jiggle joint update | Maya 动力学 Joint |
+| people joint | pivot joint | Maya 枢轴关节 |
+| join chain / john | joint chain / joint | 关节链误识别 |
+| room matrix / rule matrix | root matrix | 根矩阵误识别 |
+| Claw Simulation | Cloth Simulation | 布料模拟 |
+| data t / data time / delatime | delta t / delta time | delta 时间步长 |
+| giggle / giggle amount / calculateGiggo | jiggle / jiggle amount / calculateJiggle | jiggle 抖动效果 |
+| damp spring simple motion / damaged spring harmonic | damped spring simple motion / damped spring harmonic | 阻尼弹簧简谐运动 |
+| envegage target point / envavage target point | initial target point | 初始目标点误识别 |
+| sackling | setClean | Maya API setClean 方法 |
+| attribute effects | attribute affects | Maya API attributeAffects |
+| target of that matrix | target offset matrix | 目标偏移矩阵 |
+| inlinear | linear | 线性插值 |
+| protab | prototype | 原型 |
+| 钢体 | 刚体 | 刚体物理标准术语 |
+| 角约数 | 角约束 | 角度约束 |
+| 影视 / 引式 | 隐式 | 隐式积分法 |
+| 半显示 / 半影视 / 半影式 / 半隐性 / 半引式 / 半隐士 | 半隐式 | 半隐式欧拉 |
+| 胡和定律 / 虎克定律 | 胡克定律 | Hooke's Law |
+| 弹簧光度 | 弹簧刚度 | spring stiffness |
+| 阻尼吸水 | 阻尼系数 | damping coefficient |
+| 祖尼系统 / 促尼 | 阻尼系统 | damping system |
+| 祖尼系数 / 减斜 | 阻尼系数 | damping coefficient |
+| 检学运动 | 简谐运动 | simple harmonic motion |
+| 协律 | 斜率 | slope |
+| 奥米卡 / 奥米卡0 | 欧米伽 / 欧米伽0 | omega / omega0 |
+| 片面方程 | 偏微分方程 | partial differential equation |
+| 步传 | 步长 | step size |
+| 接盘没电了 | 键盘没电了 | keyboard battery dead |
+| M乘A平方 | M乘A (F=ma) | 牛顿第二定律 |
+| 风光震动 | 疯狂振荡 | 剧烈振荡 |
+| linear的interplay | linear的插值(lerp) | linear interpolation|
+| omega | omega | 角频率归一化 |
+| 二阶导数用lambda平方 | 二阶导得lambda平方 | 二阶导特征方程 |
+| 通解是ce乘x1t加上cr乘x2t | 通解是c1乘x1t加上c2乘x2t | 通解系数修正 |
