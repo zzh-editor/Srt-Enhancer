@@ -12,13 +12,16 @@ Usage:
 Rules:
   - Han ↔ Latin: add space (Python编程 → Python 编程)
   - Han ↔ Digit: add space (3个场景 → 3 个场景)
+  - Han ↔ Unicode letter/symbol: add space (μ乘以 → μ 乘以, π等于 → π 等于, ∞大 → ∞ 大)
   - Latin ↔ Digit: add space (Python3.9 → Python 3.9; compact units re-compacted)
+  - Latin ↔ Unicode letter/symbol: add space (μV → μ V, Δx → Δ x)
   - Protection zones (inline code `...`, math $...$, URLs) are preserved.
   - Number-unit compact: GB, MB, KB, TB, fps, FPS, etc.
 """
 
 import re
 import sys
+import unicodedata
 
 # -- Protection zone patterns --
 PROTECTION_PATTERNS = [
@@ -82,27 +85,46 @@ def _apply_number_unit_compact(text):
     return COMPACT_PATTERN.sub(r'\1\2', text)
 
 
+def _is_non_cjk_letter(ch):
+    """True if ch is a letter or math symbol outside CJK/Latin/Digit ranges."""
+    if 'a' <= ch <= 'z' or 'A' <= ch <= 'Z':
+        return False
+    if '0' <= ch <= '9':
+        return False
+    if '\u4e00' <= ch <= '\u9fff' or '\u3400' <= ch <= '\u4dbf':
+        return False
+    cat = unicodedata.category(ch)
+    return cat in ('Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Sm')
+
+
 def _apply_script_spacing(text):
     """
-    Insert space at every Han ↔ Latin, Han ↔ Digit, and Latin ↔ Digit boundary.
+    Insert space at every Han ↔ Latin, Han ↔ Digit, and Han ↔ non-CJK letter,
+    Latin ↔ Digit, and Latin ↔ non-CJK letter boundary.
+    Covers Greek letters (μ, λ, π, α, β, γ, ω, Δ, Σ, etc.),
+    Cyrillic, and mathematical symbols (∞, ∈, ∑, ∫, √, ≈, ≠, ≤, ≥, etc.)
     Compact units are re-joined by _apply_number_unit_compact running afterward.
     """
     result = []
     prev_is_han = False
     prev_is_latin = False
     prev_is_digit = False
+    prev_is_script = False
     prev_is_pct = False
 
     for ch in text:
         cur_is_han = '\u4e00' <= ch <= '\u9fff' or '\u3400' <= ch <= '\u4dbf'
         cur_is_latin = 'a' <= ch <= 'z' or 'A' <= ch <= 'Z'
         cur_is_digit = '0' <= ch <= '9'
+        cur_is_script = _is_non_cjk_letter(ch)
 
-        if prev_is_han and (cur_is_latin or cur_is_digit):
+        if prev_is_han and (cur_is_latin or cur_is_digit or cur_is_script):
             result.append(' ')
-        elif prev_is_latin and cur_is_han:
+        elif prev_is_latin and (cur_is_han or cur_is_script):
             result.append(' ')
-        elif prev_is_digit and cur_is_han:
+        elif prev_is_digit and (cur_is_han or cur_is_script):
+            result.append(' ')
+        elif prev_is_script and (cur_is_han or cur_is_latin or cur_is_digit):
             result.append(' ')
         elif prev_is_han and ch == '%':
             result.append(' ')
@@ -113,6 +135,7 @@ def _apply_script_spacing(text):
         prev_is_han = cur_is_han
         prev_is_latin = cur_is_latin
         prev_is_digit = cur_is_digit
+        prev_is_script = cur_is_script
         prev_is_pct = (ch == '%')
 
     text = ''.join(result)

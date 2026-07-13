@@ -91,6 +91,8 @@ The user uploads a `.srt` file directly via the dialog:
 
 用户回答前不得默认进入处理流程（两种都不算回答：超时 / 用户发无关消息）。
 
+去口癖、的得地、比例格式、去标点、快捷键为默认执行步骤，不逐一询问。
+
 ### 3. Parse SRT File
 
 Load and parse the input SRT file:
@@ -172,21 +174,7 @@ AI reads the input file, detects language, collects domain from `domain_scanner.
 
 This is the **only** heavy AI processing round in the pipeline.
 
-**🔴 CHECKPOINT · 🛑 STOP：** 执行 enhance.py 前将生成的 JSON config 以 **markdown 代码块形式输出在对话正文**中，供用户确认。确认项：
-- `lang` 是否正确
-- `domain` 是否与实际内容匹配
-- `terminology_overrides` 中是否有误匹配
-- `capitalization_overrides` 中是否有误匹配
-- `title_candidates` 作品名候选
-
-展示后，用 Question 工具询问「以上配置是否正确？」：
-- header: "确认 Config"
-- options:
-  - label: "确认执行" → description: "配置无误，开始运行 enhance.py"
-  - label: "需要修改" → description: "手动指定调整项，修改后重新展示"
-- multiple: false
-
-用户回答前不得默认进入下一步（超时或发无关消息不算回答）。
+Config 构建完成后直接传递至 enhance.py 执行，不在对话窗口中展示确认项。所有修改统一在最终 diff 中审核。
 
 ### 6. Execute scripts/enhance.py
 
@@ -414,7 +402,7 @@ When encountering a potentially incorrect term:
 
 ### Enhancement Checklist
 
-1. **AI Phase** (§3 Core Workflow) → detect domain → prepare config (含系统性作品名扫描) → 🔴 CHECKPOINT → execute enhance.py
+1. **AI Phase** (§3 Core Workflow) → detect domain → prepare config (含系统性作品名扫描) → execute enhance.py
 2. **enhance.py** (§4) → `normalize → terminology → spacing → capitalization → terminology → finalize` (zero AI)
 3. **AI Review** (§5-6) → title_marker.py → confidence_scorer.py → diff table → user confirm
 4. **Output** (§7) → write file → persist corrections to `correction-table.md`
