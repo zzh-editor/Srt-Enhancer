@@ -54,6 +54,23 @@ Agent：检测领域 → 构建配置 → 执行 6 步流水线 → 生成 diff 
 用户：优化字幕 asset.srt --check-casing
 ```
 
+## 竖屏字幕输出（9:16 Vertical）
+
+针对竖屏视频重新断句。横屏字幕每行偏长，竖屏单屏可见区域小，需要把每行拆成短句，每行一个完整语义单元。
+
+```
+用户：这个字幕导出竖屏字幕 meeting_Enhancer.srt
+用户：竖版字幕 lecture_Enhancer.srt
+```
+
+规则：每行 4-12 字（目标约 8 字），断在语义边界（动宾/主谓/连接词后），时间轴按各 chunk 字数比例在原段内重排。仅做断句和时间轴重排，不改文本。
+
+```bash
+python3 scripts/vertical.py input_Enhancer.srt --splits plan.json -o output_竖屏.srt
+```
+
+AI 先生成语义断句计划（JSON，`{"1": ["chunk1", "chunk2"], ...}`），脚本应用计划并重排时间轴；chunk 拼接回原文不一致时自动跳过该条，无计划时回退按 12 字标点感知硬切。
+
 ## Pipeline 步骤
 
 | 步骤 | 功能 |
