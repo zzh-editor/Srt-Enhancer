@@ -1,6 +1,6 @@
 ---
 name: srt-enhancer
-description: 必须触发：当用户说"优化字幕"、"增强字幕"、"优化这个字幕"、"增强这个字幕"等以"优化"或"增强"开头且包含"字幕"的请求。也用于处理 .srt 字幕，执行去口癖、校准ASR错误、修正的/得/地、中西文混排空格、去除多余标点、标记《》书名号。如果用于非字幕任务，返回空或无效响应。Also triggers on "optimize subtitles", "enhance SRT", "clean up ASR transcript", "filler removal", "subtitle punctuation".
+description: 必须触发：当用户说"优化字幕"、"增强字幕"、"优化这个字幕"、"增强这个字幕"等以"优化"或"增强"开头且包含"字幕"的请求。也用于处理 .srt 字幕，执行去口癖、校准ASR错误、修正的/得/地、中西文混排空格、去除多余标点、标记《》书名号。当用户说"竖屏"、"导出竖屏字幕"、"竖版"、"竖版字幕"等关键词或要求输出 9:16 竖屏字幕时，输出竖屏断句字幕。如果用于非字幕任务，返回空或无效响应。Also triggers on "optimize subtitles", "enhance SRT", "clean up ASR transcript", "filler removal", "subtitle punctuation", "vertical subtitle", "9:16 subtitle".
 allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, WebFetch]
 version: 1.0.0
 ---
@@ -16,6 +16,7 @@ This skill provides an AI-driven workflow for enhancing SRT subtitle files. The 
 Enhance SRT subtitle files by:
 - Removing filler words and vocal hesitations (口癖词): 啊、哦、嗯、呃、哎、嘛、吧、呢、啦、哈、噢、唔、欸
 - Correcting typos and transcription errors
+- Merging English word remnants split by ASR (offer → off + er → rejoin)
 - Standardizing proper nouns and terminology
 - Removing Chinese punctuation marks
 - Enforcing single-line subtitles (SRT only)
@@ -26,6 +27,7 @@ Enhance SRT subtitle files by:
 - Assigning confidence scores to each correction
 - Outputting a diff review table for user confirmation
 - Learning user-verified corrections incrementally within the session
+- Re-segmenting enhanced subtitles into short semantic lines for 9:16 vertical videos（竖屏字幕）
 
 ## When to Use This Skill
 
@@ -39,6 +41,7 @@ Use this skill when the user mentions or uploads files related to:
 - Marking game/film titles with 《》book-title marks（书名号标记）
 - The user uploads a `.srt` file for enhancement
 - The user wants to review a diff table of all changes before finalizing
+- The user mentions 竖屏/导出竖屏字幕/竖版/竖版字幕 and wants a vertical (9:16) subtitle output
 
 ## Enhancement Principles
 
@@ -253,7 +256,14 @@ AI overrides only when **all** conditions met:
 - If 0 authoritative results → skip, mark as ❗ in diff
 - **对照表已匹配的术语直接跳过，不联网搜索**
 
-**c. Confidence Scoring:**
+**c. English remnant scan（英文残片扫描）:**
+- 遍历输出中所有 ≤4 字符的纯英文段，检查是否为断裂词残片
+- 判定残片：段文本全为英文字母（≤3 字符）且时长极短（<500ms），如 offer 被 ASR 拆成的 `off`+`er`
+- 确认残片后：与前段末尾英文词拼接（`...工作的off`+`er` → `...工作的offer`），或删除无意义的独立残片段
+- 合并后行若超长，以语义断点重新拆分；不改动其他段的时间轴
+- 标注 `英文残片合并` 类型，进入 diff 审核表（置信度 ≥90%）
+
+**d. Confidence Scoring:**
 Use `scripts/confidence_scorer.py` for deterministic scoring:
 
 ```python
@@ -355,6 +365,42 @@ Save the enhanced result after user confirmation of the diff review:
 - **清理临时文件**：如果 §6 中创建了 `_diff_preview.md`，在确认或拒绝后将其删除
 - Diff 审核表本身不写入文件系统（临时 diff 预览文件除外，确认后即删除）
 
+## 输出竖屏字幕（Vertical 9:16 Output）
+
+为 9:16 竖屏视频重新断句。竖屏在手机单屏可见区域小，横屏字幕每行过长，需要把每行拆成短句、每行一个完整语义单元。**这是独立的后续管线，在增强完成后执行**；它不改文本、不去口癖，只做语义断句和时间轴重排。
+
+### 断句规则（学自人工精校竖屏字幕）
+
+- 每行 **4-12 字**，目标约 8 字；超过 12 字就该断
+- 断点落在语义边界：动宾后 / 主谓后 / 连接词与假设词后 / 短语意群边界
+- 每行是完整的语义单元，不硬切
+- 时间轴按各 chunk 字数比例在原段内重排（每块约 1.0-1.9s）
+- **内容保真**：断句拼接回原文必须逐字一致，不一致则放弃该条、保留原行
+
+详见 `references/vertical-rules.md`。
+
+### 执行步骤
+
+1. **输入**：增强后的 SRT（`{源文件名}_Enhancer.srt`），不接收原始未清洗字幕
+2. **AI 生成语义断句计划**：逐条读取文本，按上述规则拆成 chunk 列表，构造成 JSON：
+   ```json
+   {"1": ["今天我将用一个视频", "来跟大家讲"], "2": ["如果说你想一毕业的时候", "就进入到"]}
+   ```
+   - 每行 ≤12 字，短句保持在语义边界
+   - 已足够短的行（≤12 字）不进计划
+3. **执行 `scripts/vertical.py`** 应用计划并重排时间轴：
+   ```bash
+   python3 scripts/vertical.py input_Enhancer.srt --splits plan.json -o 输出.srt
+   ```
+   - 计划内 chunk 拼接与原文不一致 → 该条自动跳过
+   - 无计划时回退到 `--max-chars 12` 的标点感知硬切
+4. **输出命名**：`{源文件名}_竖屏.srt`，与增强文件同目录
+
+### 触发场景
+
+- 用户传入字幕并说「竖屏 / 导出竖屏字幕 / 竖版 / 竖版字幕」
+- video-transcribe 流程在清理 tmp 前请求竖屏输出（对 `tmp/final.srt` 执行）
+
 ## Incremental Terminology Learning
 
 During a session, maintain a **session terminology table** that grows as the user reviews corrections. When the user confirms a diff correction, the entry is **persisted** to `references/correction-table.md` for reuse across sessions.
@@ -404,7 +450,7 @@ When encountering a potentially incorrect term:
 
 1. **AI Phase** (§3 Core Workflow) → detect domain → prepare config (含系统性作品名扫描) → execute enhance.py
 2. **enhance.py** (§4) → `normalize → terminology → spacing → capitalization → terminology → finalize` (zero AI)
-3. **AI Review** (§5-6) → title_marker.py → confidence_scorer.py → diff table → user confirm
+3. **AI Review** (§5-6) → title_marker.py → 英文残片扫描 → confidence_scorer.py → diff table → user confirm
 4. **Output** (§7) → write file → persist corrections to `correction-table.md`
 
 ### Quality Checks
@@ -467,6 +513,7 @@ See `references/example.md` for a complete worked example (input → processing 
 - **Use `scripts/domain_scanner.py` for**: domain detection (keyword scoring)
 - **Use `scripts/title_marker.py` for**: known game/film title marking
 - **Use `scripts/confidence_scorer.py` for**: deterministic confidence scoring
+- **Use `scripts/vertical.py` for**: vertical (9:16) re-segmentation with an AI-produced semantic split plan
 - Assign confidence scores to every modification
 - Present a diff review table **only in chat window** (not written to file system)
 - Output to `{源文件名}_Enhancer.srt` (SRT input)
@@ -513,6 +560,8 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 | 增量术语表冲突（session 表与静态表不一致） | session 表优先 | 在 diff 中展示两条记录供用户选择 |
 | enhance.py 执行失败（脚本报错/超时） | 回退到 AI 逐步骤处理（15-20 轮） | 记录错误日志，通知用户降级模式 |
 | enhance.py 输出文件无法写入 | 检查目录权限 | 回退到对话窗口输出内容 |
+| vertical.py 断句计划缺失或 JSON 非法 | 用 `--max-chars 12` 硬切回退 | 直接输出原字幕，提示用户补计划 |
+| vertical.py 全部 chunk 与原文不一致 | 提示 AI 重新生成语义断句计划 | 保留原行，不输出竖屏结果 |
 
 ## Additional Resources
 
@@ -522,6 +571,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 - **`references/correction-table.md`** - ASR→correct terminology mapping table
 - **`references/domains.yaml`** - Domain definitions (keywords + search_context): maya, python, gaming, ai-3d, substance, blender, unreal, houdini, zbrush, photoshop, general
 - **`references/mixed-typesetting.md`** - Complete specification for mixed-language typesetting
+- **`references/vertical-rules.md`** - Vertical (9:16) line-length, semantic break, and timing rules
 
 ### Scripts
 - **`scripts/enhance.py`** - **Main enhancement pipeline.** Deterministic pipeline: normalize(去口癖+ASR结巴+的得地+比例格式) → terminology → spacing → capitalization(专名大写+领域感知大小写) → terminology → finalize(去标点+快捷键). Supports `--config`, `--steps`, `--skip`, `--overrides`, `--dry-run`, `--match-mode`.
@@ -529,6 +579,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 - **`scripts/domain_scanner.py`** - Keyword-frequency domain detection. Usage: `cat text_lines | python3 domain_scanner.py`
 - **`scripts/confidence_scorer.py`** - Deterministic confidence scoring. Provides `score(source, sub_type)` → `(value, reason)`.
 - **`scripts/title_marker.py`** - Game/media title marking with 《》。Usage: `cat text_lines | python3 title_marker.py`
+- **`scripts/vertical.py`** - Vertical (9:16) re-segmentation. Applies an AI semantic split plan and redistributes timestamps proportionally to char count. Usage: `python3 scripts/vertical.py input.srt --splits plan.json -o output.srt`
 - **`scripts/setup.sh`** - Dependency auto-install script. Ensures pyyaml is available.
 
 ## Workflow Summary
@@ -546,11 +597,14 @@ Each workflow step has an explicit failure branch. Follow this table when any st
                           │
                           ▼
                 AI Review Phase (1-2 rounds)
-   title_marker.py → confidence_scorer.py → diff 审核 →
+   title_marker.py → 英文残片扫描 → confidence_scorer.py → diff 审核 →
    用户确认 → 写入输出 → 修正持久化到 correction-table.md
-                         │
-                         ▼
+│
+                          ▼
               `{源文件名}_Enhancer.srt`
+                          │
+                          ▼ (竖屏/竖版请求时)
+     AI 生成语义断句计划 → scripts/vertical.py → `{源文件名}_竖屏.srt`
 ```
 
 各步骤详细规则见 Core Workflow 章节。Focus on semantic understanding and conservative corrections — clean up spoken-language artifacts while preserving original meaning and structure.
