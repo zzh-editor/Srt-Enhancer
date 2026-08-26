@@ -1018,3 +1018,50 @@
 | 作品级 | 作品集 | 用户确认修正 |
 | 一本亏本 | 一笔亏本 | 用户确认修正 |
 | 投币院校 | 欧美院校 | 用户确认修正 |
+
+## 用户确认修正（Unreal 水材质教程）
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 虚妄 | 虚幻 | Unreal 引擎中文名；用户确认修正 |
+| 虚幻无引擎 / UE无引擎 | 虚幻5引擎 / UE5引擎 | UE5 发音误识别；用户确认修正 |
+| 虚幻五字带 | 虚幻5自带 | UE5 内置；用户确认修正 |
+| 交散 | 焦散 | caustics；用户确认修正 |
+| 足射 | 折射 | refraction；用户确认修正 |
+| 发现 / 发线 / 发型 / 仿星 / 仿线 | 法线 | normal，法线贴图语境；用户确认修正 |
+| 下滑线 / 向滑线 | 下划线 | underscore；用户确认修正 |
+| text coordinate | Texture Coordinate | 材质节点名；用户确认修正 |
+| nomal tiling | Normal Tiling | 材质节点名；用户确认修正 |
+| Twater Normal | T_Water Normal | 贴图命名；用户确认修正 |
+| UBI | UV | 坐标误识别；用户确认修正 |
+| panel / PAN / panelpan | Panner | 材质节点 Panner；用户确认修正（注意不匹配 panner 全词） |
+| primiton | Parameter | 材质节点 Parameter；用户确认修正 |
+| speedxspeedy | SpeedX SpeedY | 参数名；用户确认修正 |
+| BlendingAngleCorrectNomals | BlendAngleCorrectedNormals | UE 官方节点；联网校准确认 |
+| Flat and Noble | Flatten Normal | UE 官方节点；联网校准确认 |
+| flattenness | flatness | 材质节点属性；用户确认修正 |
+| normalintensity | Normal Intensity | 材质节点属性；用户确认修正 |
+| cloudshadowopacity | Cloud Shadow Opacity | 材质节点属性；用户确认修正 |
+| blendblend | Blend | 发音重叠；用户确认修正 |
+| smooth step | SmoothStep | 材质节点；用户确认修正 |
+| mean | Min | 材质节点 Min，发音误识别；用户确认修正 |
+| 安卓s / 安卓L | 按S / 按L | 键盘快捷键 ASR 误识别；用户确认修正 |
+| t-noise | T_Noise | 贴图命名；用户确认修正 |
+| 接点图 | 节点图 | 材质节点图；用户确认修正 |
+| entcomponent mask / maskcompon | ComponentMask | UE 官方节点；用户确认修正 |
+| Cloud | Cloud | 注意：Cloud Shadow/Cloud Color 等 Unreal 术语不可误改为 Claude；用户确认修正 |
+| 人事 | 人生 | ASR 误识别；用户确认修正 |
+| Cloud Code | Claude Code | ASR 误识别；用户确认修正 |
+| 马海 | Maya | 发音相似；用户确认修正 |
+| 马眼 | Maya | 发音相似；用户确认修正 |
+| 面书 | 面数 | ASR 误识别；用户确认修正 |
+| 简讯 | 简历 | ASR 误识别；用户确认修正 |
+| 解面 | 减面 | ASR 误识别；用户确认修正 |
+| XGBT | ChatGPT | ASR 误识别；用户确认修正 |
+| chatpdt | ChatGPT | ASR 误识别；用户确认修正 |
+| Chad GPD | ChatGPT | ASR 误识别；用户确认修正 |
+| 拆GPT | ChatGPT | ASR 误识别；用户确认修正 |
+| Brain Storing | Brainstorming | ASR 误识别；用户确认修正 |
+| 原住期 | 圆柱体 | ASR 误识别；用户确认修正 |
+| 原柱体 | 圆柱体 | ASR 误识别；用户确认修正 |
+| 玛雅 | Maya | 大小写修正；用户确认修正 |
