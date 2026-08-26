@@ -45,25 +45,11 @@ Use this skill when the user mentions or uploads files related to:
 
 ## Enhancement Principles
 
-1. **Timeline Preservation**: Never modify timestamps or subtitle numbering (SRT only)
-2. **Content Fidelity**: Correct and clean existing content; don't add new content
-3. **Filler Word Removal**: Remove vocal hesitations and meaningless fillers
- 4. **对照表优先于联网搜索**：
-    - 用户提供的对照表（`terminology_overrides`）→ 最高优先，先精确 → 大小写折叠 → 归一化
-    - 静态 `correction-table.md` → 同样三级模糊匹配
-    - 以上均未匹配 → 领域感知联网校准（带 `search_context`）
-    - AI 上下文猜测 → 最低优先，标注 ❗
- 5. **Hybrid AI + Script Execution**:
-    - AI handles: language detection, web calibration (fallback), config preparation, result review
-    - **`scripts/enhance.py`** handles: deterministic pipeline execution (normalize → terminology → spacing → capitalization → terminology → finalize)
-    - **`scripts/domain_scanner.py`** handles: domain detection (keyword scoring)
-    - **`scripts/title_marker.py`** handles: game/media title marking
-    - **`scripts/confidence_scorer.py`** handles: confidence scoring
-    - This reduces AI inference rounds from ~15-20 to **2-4**
- 6. **Web-Verified**: Use web search to verify suspected ASR errors after all table matching
- 7. **Confidence-Aware**: Assign confidence levels to every change; flag low-confidence corrections for user review
- 8. **Session Learning + Persistent Storage**: User-verified corrections are appended to `references/correction-table.md` for reuse across sessions
- 9. **Mixed-Language Typesetting**: Apply consistent spacing, capitalization, and punctuation rules for multilingual content while protecting code, formulas, and file paths
+1. **时间轴与保真**：不改时间戳/编号；只清洗不新增，不删有意义内容（的/了/吗等虚词保留）
+2. **对照表优先**（`overrides` > `correction-table.md` > 领域联网校准 `search_context` > AI 猜测❗）：前两级 `auto` 三级匹配（精确→大小写→归一化），未命中才联网
+3. **Hybrid AI + Script**（2-4 轮 vs 15-20 轮）：AI 负责语言/联网/配 config/复核；`enhance.py` 负责确定性流水线 `normalize→terminology→spacing→capitalization→terminology→finalize`；`domain_scanner/title_marker/confidence_scorer` 各司其职
+4. **可信度与复用**：每处修改打分（≥90高/70-89中/50-69低/<50跳过），低分必审；用户确认的修正持久化到 `references/correction-table.md`
+5. **混排与竖屏**：CJK-Latin 自动空格、代码/公式/路径保护、数字单位紧凑；竖屏 4-12 字/语义边界/时间轴按字数重排
 
 ## Core Workflow
 
@@ -491,35 +477,18 @@ When encountering a potentially incorrect term:
 
 See `references/example.md` for a complete worked example (input → processing steps → diff table → output).
 
-## Important Constraints
+## 约束（执行硬检查，与原则互补）
 
-### Must NOT:
-- Modify timestamps or subtitle numbering (SRT only)
-- Add new content that wasn't in the original file
-- Change the meaning or intent of subtitles
-- Remove meaningful content (only fillers)
-- Alter SRT structure or formatting (SRT only)
-- Remove grammatical particles (的, 了, 吗, etc.) that carry meaning
-- Apply low-confidence corrections without user approval
-- 将 diff 审核表写入文件系统（临时 diff 预览文件除外，确认后删除）
-- 未经用户审核确认就写入字幕输出文件
-- 将中间 config JSON 写入文件系统（全量通过 `--overrides` CLI 参数传递）
-- **重复已经在 config 中配置好的 enhance.py 步骤**（AI 不应再次做 enhance.py 已完成的确定性工作）
+### 禁止 Must NOT
+- 改时间戳/编号、改 SRT 结构、新增原文没有的内容、改变语义
+- 误删有意义内容与虚词（的/了/吗）、误删话语标记（说白了/然后）
+- 低分（<70）未审即用；未审即写输出；将 diff/中间 config 写入文件系统（`_diff_preview.md` 临时除外）
+- 重复执行 config 已配好的 `enhance.py` 步骤
 
-### Must DO:
-- **对照表优先原则**：用户 overrides > correction-table.md > 领域感知联网搜索 > AI 上下文猜测
-- **Use AI for**: language detection, web calibration (table-unmatched only), config building, result review
-- **Use `scripts/enhance.py` for**: deterministic pipeline (normalize → terminology → spacing → capitalization → terminology → finalize)
-- **Use `scripts/domain_scanner.py` for**: domain detection (keyword scoring)
-- **Use `scripts/title_marker.py` for**: known game/film title marking
-- **Use `scripts/confidence_scorer.py` for**: deterministic confidence scoring
-- **Use `scripts/vertical.py` for**: vertical (9:16) re-segmentation with an AI-produced semantic split plan
-- Assign confidence scores to every modification
-- Present a diff review table **only in chat window** (not written to file system)
-- Output to `{源文件名}_Enhancer.srt` (SRT input)
-- Output file to original file's same directory by default
-- Preserve exact timestamps and structure (SRT only)
-- **Persist user-confirmed corrections to `references/correction-table.md`**
+### 必须 Must DO
+- 工具分工：`enhance.py` 跑确定性流水线 `normalize→terminology→spacing→capitalization→terminology→finalize`；`domain_scanner/title_marker/confidence_scorer/vertical.py` 各司其职；AI 仅做语言/联网/配置/复核
+- 交互：diff 仅在对话中展示（前 20 条 + 完整预览路径），`🔴 CHECKPOINT` 处用 Question 确认后才写文件
+- 输出：`{源文件名}_Enhancer.srt`（同目录，仅 .srt），低分必审、确认后持久化到 `correction-table.md`，时间轴原样保留
 
 ## 反模式与黑名单（Anti-Patterns）
 
