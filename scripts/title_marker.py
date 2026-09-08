@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Deterministic game/media title marking with 《》."""
+"""Deterministic game/media title marking with 《》.
+
+Contract (P1-2): This script is a deterministic first-pass with HIGH precision, NO recall guarantee.
+- Operates strictly line-local: title + GAME_CUES/FILM_CUES must co-occur on the SAME subtitle line to mark.
+- KNOWN_TITLES (148 entries) filtered by TOOL_BLACKLIST; strong cue +逐行 ⇒ low recall by design.
+- Full-document semantic title detection is handled by the AI systematic scan in SKILL §7a,
+  which builds `title_candidates` via web verification and overrides this script's output.
+Do NOT use this script as a standalone recall diagnostic.
+"""
 
 import re
 
@@ -184,7 +192,11 @@ def _is_tool(name: str) -> bool:
 
 
 def mark_titles(text: str) -> str:
-    """Add 《》 book-title marks to known game/film titles."""
+    """Add 《》 book-title marks to known game/film titles.
+
+    Contract: line-local high-precision first-pass. Requires title and cue on same line.
+    Full recall is provided by AI title_candidates override (see module docstring).
+    """
     for title, marked in sorted(KNOWN_TITLES.items(), key=lambda x: -len(x[0])):
         if title not in text:
             continue

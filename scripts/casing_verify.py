@@ -221,7 +221,8 @@ def main():
         print()
         print(f"{len(results)} term(s) checked")
         print()
-        print("复制到 CAPITALIZATION_MAP 或 CASE_GROUPS（根据 domain 分组）:")
+        print("追加到 references/correction-table.md 的「大小写校准」表格（专有名词 / 领域感知大小写组）：")
+        print("（代码侧由 enhance.load_capitalization_table() 读取，变量为 cap_map / case_groups）")
 
 
 if __name__ == "__main__":

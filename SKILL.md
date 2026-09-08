@@ -147,8 +147,8 @@ AI reads the input file, detects language, collects domain from `domain_scanner.
 
 | 步骤 | 来源 | 匹配模式 | 说明 |
 |------|------|---------|------|
-| 1 | `terminology_overrides` (用户/CLI) | `auto`: 精确→大小写→归一化 | **最高优先级**，匹配后直接替换，不联网搜索 |
-| 2 | `correction-table.md` | `auto`: 精确→大小写→归一化 | 静态表，同样三级匹配 |
+| 1 | `terminology_overrides` (用户/CLI) | `auto`: 精确→大小写→归一化 | **最高优先级**，匹配后直接替换，不联网搜索。归一化层支持含中文术语（如 `30图`→`三视图`）和空格/破折号变体（`Tab Now`→`TapNow`） |
+| 2 | `correction-table.md` | `auto`: 精确→大小写→归一化 | 静态表，同样三级匹配。变体行 `a / b | X` 仅当变体含数字时拆为独立键（`30图 / 40图`），纯中文/纯拉丁多值行保持整体键避免前缀误伤 |
 | 3 | 联网搜索 | 领域感知 (带 `search_context`) | 仅 1-2 均未匹配时执行 |
 | 4 | AI 上下文猜测 | 语义分析 | 最低优先，标注 ❗ |
 
@@ -200,7 +200,7 @@ python3 scripts/enhance.py input.srt --steps terminology,spacing
 |------|----------|-------------|
 | 1 | `normalize` | Combined: defiller(去掉口癖+ASR结巴) → de_de(的得地修正) → ratio_format(16比9 → 16:9) |
 | 2 | `terminology` | 第一轮术语替换：Apply ASR→correct mapping from `correction-table.md` + overrides, with fuzzy matching |
-| 3 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` (inlined, no subprocess overhead)，仅做空格，不再含大小写 |
+| 3 | `spacing` | CJK-Latin spacing via `scripts/apply_spacing.py` (inlined, no subprocess overhead)，仅做空格，不再含大小写。含中文↔中文间多余空格清除（`_collapse_cjk_spaces`，修断行 join / 错断句 / 误输入残留，如「不做 树」→「不做树」） |
 | 4 | `capitalization` | 专有名词大写 + 领域感知大小写归一化，从 `correction-table.md`「大小写校准」节加载，支持 AI overrides |
 | 5 | `terminology` | 第二轮术语替换：spacing + capitalization 后英文规范化后，再次匹配 correction-table.md 中的复合术语 |
 | 6 | `finalize` | Combined: depunct(去标点, 保留`《》`和代码保护域) → hotkeys(标准化Ctrl+E等快捷键, 最后执行避免+被剥离) |
@@ -222,6 +222,8 @@ Run `scripts/title_marker.py` for known titles:
 cat output.srt | grep -v '^[0-9]*$' | grep -v '\-\->' | \
     python3 scripts/title_marker.py
 ```
+
+> **Contract (P1-2 分两阶段)**：`title_marker.py` = 确定性首遍/行级/高精确不保证召回——标题与 `GAME_CUES/FILM_CUES` 必须同行才加《》，跨行一律不标，避免误把工具/公司名当作品；`AI systematic scan` = 文档级补全——基于全文上下文与联网验证的 `title_candidates` 对未标项做最终 override。本轮明确该契约，title_marker 暂不扩为全文滑窗；后续若 AI 兜底过重，再重做为“全文 SRT → 建上下文 → 候选定位 → 只改对应字幕”的上下文感知版本。
 
 **AI systematic scan** (并行于 Config 阶段，不增加轮次)：
 
@@ -545,9 +547,10 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 ### Scripts
 - **`scripts/enhance.py`** - **Main enhancement pipeline.** Deterministic pipeline: normalize(去口癖+ASR结巴+的得地+比例格式) → terminology → spacing → capitalization(专名大写+领域感知大小写) → terminology → finalize(去标点+快捷键). Supports `--config`, `--steps`, `--skip`, `--overrides`, `--dry-run`, `--match-mode`.
 - **`scripts/apply_spacing.py`** - Deterministic CJK-Latin spacing tool (仅空格, 不再含大小写). Called by enhance.py.
-- **`scripts/domain_scanner.py`** - Keyword-frequency domain detection. Usage: `cat text_lines | python3 domain_scanner.py`
+- **`scripts/domain_scanner.py`** - Keyword-frequency domain detection (P1-1 类型化边界：短缩写 `ue/uv` 不误判 `value/issue`)。Usage: `cat text_lines | python3 domain_scanner.py`
 - **`scripts/confidence_scorer.py`** - Deterministic confidence scoring. Provides `score(source, sub_type)` → `(value, reason)`.
-- **`scripts/title_marker.py`** - Game/media title marking with 《》。Usage: `cat text_lines | python3 title_marker.py`
+- **`scripts/title_marker.py`** - Game/media title marking with 《》。（P1-2 Contract：行级高精确首遍，AI scan 文档级补全。Usage: `cat text_lines | python3 title_marker.py`）
+- **`scripts/casing_verify.py`** - Maintenance helper: verify standard casing via heuristics + Wikipedia, output rows to append to `correction-table.md`「大小写校准」。(P2-2 维护用途，已更新文案为 `cap_map/case_groups`。)
 - **`scripts/vertical.py`** - Vertical (9:16) re-segmentation. Applies an AI semantic split plan and redistributes timestamps proportionally to char count. Usage: `python3 scripts/vertical.py input.srt --splits plan.json -o output.srt`
 - **`scripts/setup.sh`** - Dependency auto-install script. Ensures pyyaml is available.
 

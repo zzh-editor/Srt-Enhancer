@@ -1065,3 +1065,30 @@
 | 原住期 | 圆柱体 | ASR 误识别；用户确认修正 |
 | 原柱体 | 圆柱体 | ASR 误识别；用户确认修正 |
 | 玛雅 | Maya | 大小写修正；用户确认修正 |
+
+---
+
+## 用户确认修正（游戏留学直播）
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| AEI | AI | ASR 误识别；用户确认修正 |
+| Germantically | dramatically | ASR 误识别；联网校准确认 |
+| 作品级 | 作品集 | ASR 误识别；用户确认修正 |
+| 谬不 | 模糊 | ASR 误识别；用户确认修正 |
+| 对男人理工 | 南洋理工 | ASR 误识别；用户确认修正 |
+
+## 9. 用户确认修正（本会话）
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| Letscape | Landscape | Unreal Engine 地形工具 |
+| police | poly | 上下文为 Substance 材质 |
+| Cloud Code | Claude Code | Anthropic AI 编程助手 |
+| cloud | Claude | Anthropic AI 助手 |
+| Mouse Shader | Moss Shader | 苔藓材质着色器 |
+| mouse cliff | moss cliff | 苔藓悬崖岩石 |
+| Maker your pass-through | Mask your pass-through | Substance Painter 遮罩 |
+| 16比9 | 16:9 | 比例格式标准化 |
+| Tab Now | TapNow | AI 生图工具；Tab Now 为 Tap Now 的 ASR 变体 |
+| 白膜 | 白模 | 白模 = whitebox / clay render；同音字混淆 |

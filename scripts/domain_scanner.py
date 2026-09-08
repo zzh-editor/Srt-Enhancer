@@ -16,6 +16,38 @@ def load_domains(path: Path = DOMAINS_PATH) -> dict:
         return yaml.safe_load(f) or {"domains": {}}
 
 
+def _has_chinese(s: str) -> bool:
+    return any('\u4e00' <= ch <= '\u9fff' or '\u3400' <= ch <= '\u4dbf' for ch in s)
+
+
+def _build_kw_pattern(kw: str) -> re.Pattern | None:
+    """Build typed regex for keyword boundary handling. Returns None for pure Chinese (use substring)."""
+    if _has_chinese(kw):
+        return None  # pure/ mixed Chinese → substring match
+    stripped = kw.strip()
+    if not stripped:
+        return None
+    # contains space → multi-word phrase, allow flexible whitespace
+    if ' ' in stripped:
+        tokens = stripped.split()
+        # short phrase with any token ≤3 → more permissive letter-boundary, else word boundary
+        has_short = any(len(t) <= 3 and t.isalpha() for t in tokens)
+        inner = r'\s+'.join(re.escape(t) for t in tokens)
+        if has_short:
+            return re.compile(r'(?<![A-Za-z0-9])' + inner + r'(?![A-Za-z0-9])', re.IGNORECASE)
+        return re.compile(r'\b' + inner + r'\b', re.IGNORECASE)
+    # single token
+    if len(stripped) <= 3 and stripped.isalpha():
+        # short abbrev like ue/uv/sop/vex/goz → don't require word boundary \b, allow UE5 but not value
+        return re.compile(r'(?<![A-Za-z])' + re.escape(stripped) + r'(?![A-Za-z])', re.IGNORECASE)
+    # single long token (may contain digits/hyphens)
+    # use word boundary for pure alphanumeric
+    if re.match(r'^[A-Za-z0-9]+$', stripped):
+        return re.compile(r'\b' + re.escape(stripped) + r'\b', re.IGNORECASE)
+    # fallback: letter-boundary
+    return re.compile(r'(?<![A-Za-z0-9])' + re.escape(stripped) + r'(?![A-Za-z0-9])', re.IGNORECASE)
+
+
 def detect_domain(texts: list[str],
                   domains_data: dict | None = None) -> str:
     """Score each domain by keyword frequency. Return highest-scoring domain key."""
@@ -26,18 +58,28 @@ def detect_domain(texts: list[str],
         return "general"
 
     scores: dict[str, int] = {}
-    domain_keywords: dict[str, list[str]] = {}
+    # pre-compile patterns per domain
+    domain_patterns: dict[str, list[tuple[str, re.Pattern | None]]] = {}
     for key, cfg in domains.items():
         kws = cfg.get("keywords", [])
-        domain_keywords[key] = kws
+        compiled = []
+        for kw in kws:
+            pat = _build_kw_pattern(kw)
+            compiled.append((kw, pat))
+        domain_patterns[key] = compiled
         scores[key] = 0
 
     for text in texts:
         text_lower = text.lower()
-        for domain, kws in domain_keywords.items():
-            for kw in kws:
-                if kw.lower() in text_lower:
-                    scores[domain] += 1
+        for domain, kw_pats in domain_patterns.items():
+            for kw, pat in kw_pats:
+                if pat is None:
+                    # Chinese substring
+                    if kw.lower() in text_lower:
+                        scores[domain] += 1
+                else:
+                    if pat.search(text):
+                        scores[domain] += 1
 
     # Filter out zero scores
     scored = {k: v for k, v in scores.items() if v > 0}

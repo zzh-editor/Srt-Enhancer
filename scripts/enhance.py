@@ -11,12 +11,14 @@ Usage:
         --config my_overrides.json
 
 Steps (applied in order, all optional):
-  1. parse        Parse SRT into internal format
-  2. normalize    Text normalization: defiller(去口癖) → de_de(的得地) → ratio_format(16比9→16:9)
-  3. terminology  ASR term replacement (from correction-table.md + overrides)
-  4. spacing      CJK-Latin spacing (inlined, no subprocess)
-   5. finalize     depunct(去标点) → hotkeys(Ctrl+E 标准化), kept last to avoid + stripping
-  7. write        Write output SRT
+  1. parse          Parse SRT into internal format
+  2. normalize      Text normalization: defiller(去口癖) → de_de(的得地) → ratio_format(16比9→16:9)
+  3. terminology    ASR term replacement (from correction-table.md + overrides) — first pass
+  4. spacing        CJK-Latin spacing (inlined, no subprocess)
+  5. capitalization Proper noun / domain-aware casing normalization
+  6. terminology    ASR term replacement — second pass after spacing/capitalization
+  7. finalize       depunct(去标点) → hotkeys(Ctrl+E 标准化), kept last to avoid + stripping
+  8. write          Write output SRT
 """
 
 import argparse
@@ -131,6 +133,24 @@ def write_srt(segments: list[dict], path: str):
             f.write(f"{seg['text']}\n\n")
 
 
+# ── Markdown table helper (P2-1 unified parser) ─────────────────────
+
+def _split_markdown_row(line: str) -> list[str] | None:
+    """Parse one Markdown table row into cells. Return None for non-data rows."""
+    stripped = line.strip()
+    if not stripped.startswith("|"):
+        return None
+    inner = stripped.strip("|")
+    cells = [c.strip() for c in inner.split("|")]
+    if not any(cells):
+        return None
+    # separator row: | --- | --- | ...
+    if all(re.match(r"^[:\-\s]+$", c) for c in cells if c):
+        return None
+    # header guard is handled by caller, but keep generic skip for empty marker cells
+    return cells
+
+
 # ── Terminology loader ─────────────────────────────────────────────
 
 def load_terminology(path: Path = TERMINOLOGY_PATH) -> dict[str, str]:
@@ -139,26 +159,38 @@ def load_terminology(path: Path = TERMINOLOGY_PATH) -> dict[str, str]:
     if not path.exists():
         return mapping
 
-    with open(path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    # Parse Markdown tables: | ASR | correct | ... |
-    table_pattern = re.compile(r"^\|\s*(.+?)\s*\|\s*(.+?)\s*\|", re.MULTILINE)
     skip_correct_markers = ["正确", "✅", "无需修正"]
-    for match in table_pattern.finditer(content):
-        asr = match.group(1).strip()
-        correct = match.group(2).strip()
-        if not asr or not correct:
-            continue
-        asr_lower = asr.lower()
-        correct_lower = correct.lower()
-        if asr_lower == correct_lower:
-            continue
-        if any(m in correct for m in skip_correct_markers):
-            continue
-        if "ASR 误识别" in asr:
-            continue
-        mapping[asr] = correct
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            cells = _split_markdown_row(line)
+            if cells is None or len(cells) < 2:
+                continue
+            asr = cells[0].strip()
+            correct = cells[1].strip()
+            if not asr or not correct:
+                continue
+            asr_lower = asr.lower()
+            correct_lower = correct.lower()
+            if asr_lower == correct_lower:
+                continue
+            if any(m in correct for m in skip_correct_markers):
+                continue
+            if "ASR 误识别" in asr:
+                continue
+            # skip generic header remnants
+            if asr in ("ASR 误识别", "ASR 输出", "小写形式"):
+                continue
+            lhs = [a.strip() for a in asr.split(" / ") if a.strip()]
+            rhs = [c.strip() for c in correct.split(" / ") if c.strip()]
+            rhs = (rhs * len(lhs))[:len(lhs)] if len(rhs) == 1 else rhs
+            # 整体键保留（拉丁英文变体拆开易误伤前缀，如 sculp/sculptor、smart/Smart Material）。
+            mapping[asr] = correct
+            for i, a in enumerate(lhs):
+                # 仅含数字的变体值得独立成键（如 30图 / 40图 → 三视图 / 四视图）。
+                # 纯中文或纯拉丁变体（材质 / 体积 / sculpt / SC）作整体键即可，
+                # 独立成键会全局误替换普通词，拆开反而引入噪声。
+                if re.search(r'[0-9]', a):
+                    mapping[a] = rhs[i] if i < len(rhs) else rhs[-1]
 
     return mapping
 
@@ -193,6 +225,9 @@ def load_capitalization_table(path: Path = TERMINOLOGY_PATH) -> tuple[dict[str, 
     Returns (cap_map, case_groups) where:
       cap_map: lowercase → standard casing (generic, domain-independent)
       case_groups: group_name → {lowercase → standard_casing} (domain-sensitive)
+
+    Parses Markdown rows by splitting on '|' columns instead of 2-group regex,
+    so 4-col domain rows correctly preserve the group column.
     """
     cap_map: dict[str, str] = {}
     case_groups: dict[str, dict[str, str]] = {}
@@ -202,10 +237,8 @@ def load_capitalization_table(path: Path = TERMINOLOGY_PATH) -> tuple[dict[str, 
     with open(path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    current_section: str | None = None
-    current_subsection: str | None = None
     in_cap_section = False
-    table_pattern = re.compile(r"^\|\s*(.+?)\s*\|\s*(.+?)\s*\|")
+    current_subsection: str | None = None
 
     for line in lines:
         stripped = line.strip()
@@ -224,25 +257,24 @@ def load_capitalization_table(path: Path = TERMINOLOGY_PATH) -> tuple[dict[str, 
             current_subsection = stripped[4:].strip()
             continue
 
-        # Skip header rows
-        if "---" in stripped or stripped.startswith("| 小写"):
+        cells = _split_markdown_row(line)
+        if cells is None or len(cells) < 2:
             continue
-        if not stripped.startswith("|"):
-            continue
-
-        m = table_pattern.match(stripped)
-        if not m:
+        # skip header row | 小写形式 | 标准写法 | ...
+        if cells[0] in ("小写形式", "小写"):
             continue
 
         if current_subsection and "专有名词" in current_subsection:
-            low = m.group(1).strip()
-            std = m.group(2).strip()
+            low = cells[0].strip()
+            std = cells[1].strip()
             if low and std:
                 cap_map[low] = std
         elif current_subsection and "领域" in current_subsection:
-            low = m.group(1).strip()
-            std = m.group(2).strip()
-            group_name = m.group(3).strip() if len(m.groups()) >= 3 else "generic"
+            if len(cells) < 3:
+                continue
+            low = cells[0].strip()
+            std = cells[1].strip()
+            group_name = cells[2].strip() if len(cells) >= 3 and cells[2].strip() else "generic"
             if low and std:
                 case_groups.setdefault(group_name, {})[low] = std
 
@@ -272,37 +304,74 @@ def _is_discourse_marker(text: str, markers: list[str]) -> bool:
 
 
 def step_defiller(segments: list[dict], config: dict) -> list[dict]:
-    fillers = config["filler_words"]
-    markers = config["discourse_markers"]
+    """三级语用去口癖：高置信积极删 / 语气词位置+上下文删 / 尾缀与话语标记保护。"""
+    markers: list[str] = config.get("discourse_markers", [])
+    # Tier definitions (align with DEFAULT_CONFIG filler_words)
+    HIGH_FILLERS = {"嗯", "呃", "噢", "唔", "欸", "哎", "嘿"}
+    MEDIUM_FILLERS = {"啊", "哦", "嘛", "吧", "呢", "啦", "哈", "哟", "喔"}
+    # Tail / discourse protection: must not be altered (宁可少删)
+    TAIL_PROTECT = ["好吧", "是吧", "对吧", "怎么办呢", "是啊", "知道吗"]
+    protected_pool = list(dict.fromkeys(markers + TAIL_PROTECT))
 
     for seg in segments:
         text = seg["text"]
-        original = text
 
         # ASR stutter: collapse repeated chars/words
         text = _fix_stutter(text)
 
-        # Remove hesitation sounds at start
-        for f in fillers:
+        # Protect discourse markers & tail phrases via placeholders
+        protect_map: dict[str, str] = {}
+        # longest first to avoid partial overlap
+        for idx, phrase in enumerate(sorted(protected_pool, key=len, reverse=True)):
+            if phrase and phrase in text:
+                ph = f"\x00PDEF_{idx}\x00"
+                protect_map[ph] = phrase
+                text = text.replace(phrase, ph)
+
+        # A: high-confidence fillers — aggressive global removal (inside CJK included)
+        for f in HIGH_FILLERS:
+            if f in text:
+                # also strip leading runs that may have been produced
+                while text.startswith(f):
+                    text = text[len(f):].lstrip()
+                text = text.replace(f, "")
+
+        # B: medium fillers — position + context sensitive
+        for f in MEDIUM_FILLERS:
+            if f not in text:
+                continue
+            # leading
             while text.startswith(f):
                 text = text[len(f):].lstrip()
-            # Remove hesitation surrounded by spaces
-            pattern = re.compile(r"\s+" + re.escape(f) + r"\s+")
-            text = pattern.sub(" ", text)
+            # trailing (any prior char, not only punctuation) — protected tails already sheltered
+            while text.endswith(f) and len(text) > len(f):
+                text = text[:-len(f)].rstrip()
+                # keep stripping consecutive same filler at end
+            # middle: CJK-filler-CJK, filler before punctuation, after punctuation, and space-surrounded
+            # Use placeholders-safe regex (placeholders contain \x00, not CJK)
+            text = re.sub(rf"(?<=[\u4e00-\u9fff]){re.escape(f)}(?=[\u4e00-\u9fff])", "", text)
+            text = re.sub(rf"{re.escape(f)}(?=[，。！？；,;!?])", "", text)
+            text = re.sub(rf"(?<=[，。！？；]){re.escape(f)}", "", text)
+            text = re.sub(rf"\s+{re.escape(f)}\s+", " ", text)
 
-        # Remove sentence-final particles (when standalone at end)
-        for f in ["嘛", "吧", "呢", "啦", "哈", "哟", "喔"]:
-            if text.endswith(f) and len(text) > len(f):
-                prev_char = text[-len(f) - 1]
-                if prev_char in "，。！？；":
-                    text = text[:-len(f)].rstrip()
+        # Also handle any remaining filler_words not covered by High/Medium (fallback to leading/trailing)
+        remaining_fillers = set(config.get("filler_words", [])) - HIGH_FILLERS - MEDIUM_FILLERS
+        for f in remaining_fillers:
+            while text.startswith(f):
+                text = text[len(f):].lstrip()
+            while text.endswith(f) and len(text) > len(f):
+                text = text[:-len(f)].rstrip()
+            text = re.sub(rf"\s+{re.escape(f)}\s+", " ", text)
 
-        # Don't remove discourse markers — they're valid connectors
-        if text != original and _is_discourse_marker(text, markers):
-            text = original
+        # Restore protected phrases
+        for ph, orig in protect_map.items():
+            text = text.replace(ph, orig)
 
-        # Clean up double spaces
+        # Clean up double spaces (CJK has none, but keep for mixed)
         text = re.sub(r" {2,}", " ", text).strip()
+        # Guard against emptying the subtitle entirely
+        if not text:
+            text = seg["text"].strip()
         seg["text"] = text
 
     return segments
@@ -411,23 +480,22 @@ def _try_replace(text: str, asr_text: str, correct_text: str,
     if pattern.search(text):
         return pattern.sub(correct_text, text)
 
-    # Level 3: normalized — multi-word or CamelCase split
+    # Level 3: normalized — wide-space match (multi-word / CamelCase / CJK-Latin)
     def _norm(s: str) -> str:
         return re.sub(r'[\s\-_.,;:/]', '', s).lower()
 
     text_norm = _norm(text)
     asr_norm = _norm(asr_text)
-    if asr_norm in text_norm:
-        # Tokenize: space split then CamelCase split per word
-        raw_tokens = asr_text.split()
-        tokens: list[str] = []
-        for t in raw_tokens:
-            parts = re.findall(r'[A-Z]?[a-z]+|[A-Z]+|[0-9]+', t)
-            tokens.extend(parts if parts else [t])
-        if len(tokens) > 1:
-            flexible = re.compile(
-                r'\s*'.join(re.escape(t) for t in tokens), re.IGNORECASE
-            )
+    if asr_norm and asr_norm in text_norm:
+        # 压缩后已确认字符序列出现，回到原文做「字符间允许 SEP 类字符」的宽松匹配。
+        # SEP 为归一化会去掉的分隔符，保证字符相邻性语义与压缩一致。
+        # 覆盖中文术语（如 30图→三视图，tokenize 会把中文丢光导致不落地）与
+        # 英文多词/CamelCase（原有逻辑的泛化）。
+        sep = r'[\s\-_.,;:/]*'
+        flexible = re.compile(
+            sep.join(re.escape(ch) for ch in asr_text), re.IGNORECASE
+        )
+        if flexible.search(text):
             return flexible.sub(correct_text, text)
 
     return None
@@ -480,6 +548,13 @@ DOMAIN_CASE_GROUPS_MAP: dict[str, list[str]] = {
     "maya": ["generic_acronym", "os_term", "brand_tool", "ai_3d", "file_format"],
     "python": ["generic_acronym", "os_term", "file_format"],
     "gaming": ["generic_acronym", "os_term", "brand_tool", "file_format"],
+    # P2-4: complement missing 6 domains (all DCC/texturing domains share brand_tool+ai_3d if applicable)
+    "substance": ["generic_acronym", "os_term", "brand_tool", "ai_3d", "file_format"],
+    "blender": ["generic_acronym", "os_term", "brand_tool", "ai_3d", "file_format"],
+    "unreal": ["generic_acronym", "os_term", "brand_tool", "ai_3d", "file_format"],
+    "houdini": ["generic_acronym", "os_term", "brand_tool", "ai_3d", "file_format"],
+    "zbrush": ["generic_acronym", "os_term", "brand_tool", "ai_3d", "file_format"],
+    "photoshop": ["generic_acronym", "os_term", "brand_tool", "file_format"],
 }
 DEFAULT_CASE_GROUPS = ["generic_acronym", "os_term", "file_format"]
 

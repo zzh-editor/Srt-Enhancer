@@ -133,20 +133,31 @@ def _heuristic_split(text: str, max_chars: int) -> list[str]:
 
 def split_segment(seg: dict, chunks: list[str], min_ms: int = DEFAULT_MIN_MS
                   ) -> list[dict]:
-    """Split one segment into timed chunks proportional to char count."""
+    """Split one segment into timed chunks proportional to char count.
+
+    Invariant: 文本完整性 > 时间合法性 > 最短时长偏好。
+    Any split that would silently drop characters falls back to the original segment.
+    """
     chunks = [c.strip() for c in chunks if c.strip()]
     if not chunks:
         return [dict(seg)]
-    # Content fidelity: chunks must reproduce the original text
+    # Content fidelity (pre-check): chunks must reproduce the original text
     if _norm(seg["text"]) != _norm("".join(chunks)):
         return [dict(seg)]
 
     total_dur = seg["end"] - seg["start"]
+    if total_dur <= 0:
+        return [dict(seg)]
     total_chars = sum(_visible_len(c) for c in chunks)
     if total_chars == 0:
         return [dict(seg)]
 
+    # Effective min_dur: compress if chunks * min_ms would exceed total_dur
+    # so that no chunk is silently dropped.
     min_dur = min_ms / 1000.0
+    if len(chunks) * min_dur > total_dur:
+        min_dur = total_dur / len(chunks)
+
     out: list[dict] = []
     cursor = seg["start"]
     acc_chars = 0
@@ -157,14 +168,31 @@ def split_segment(seg: dict, chunks: list[str], min_ms: int = DEFAULT_MIN_MS
             end = cursor + min_dur
         if end > seg["end"]:
             end = seg["end"]
-        if end > cursor:
-            out.append({
-                "idx": seg["idx"],
-                "start": cursor,
-                "end": end,
-                "text": chunk,
-            })
+        # time legitimacy: must advance
+        if end <= cursor:
+            # would collapse or go backwards → fallback to original
+            return [dict(seg)]
+        out.append({
+            "idx": seg["idx"],
+            "start": cursor,
+            "end": end,
+            "text": chunk,
+        })
         cursor = end
+
+    # Post-allocation invariants: count + content + time ordering
+    if len(out) != len(chunks):
+        return [dict(seg)]
+    if _norm("".join(o["text"] for o in out)) != _norm(seg["text"]):
+        return [dict(seg)]
+    # time ordering and bounds
+    for i, o in enumerate(out):
+        if o["start"] >= o["end"]:
+            return [dict(seg)]
+        if o["start"] < seg["start"] - 1e-6 or o["end"] > seg["end"] + 1e-6:
+            return [dict(seg)]
+        if i > 0 and o["start"] < out[i-1]["end"] - 1e-6:
+            return [dict(seg)]
     return out or [dict(seg)]
 
 

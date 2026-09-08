@@ -23,6 +23,44 @@ import re
 import sys
 import unicodedata
 
+# -- Canonical compound terms (single source of truth) --
+# All compound terms that must stay unsplit by script-spacing and be repaired if split.
+# Lowercase key → canonical casing. Used to derive both PROTECTION and FIXUP.
+CANONICAL_COMPOUNDS: dict[str, str] = {
+    "hyper3d": "Hyper3D",
+    "comfyui": "ComfyUI",
+    "tapnow": "TapNow",
+    "nanobanana": "NanoBanana",
+    "bananapro": "BananaPro",
+    "contentaware": "ContentAware",
+    "texturedelight": "TextureDelight",
+    "pureref": "PureRef",
+    "frontright": "FrontRight",
+    "multiviewreference": "MultiViewReference",
+    "shiftf5": "ShiftF5",
+    "shiftf4": "ShiftF4",
+    "shiftf6": "ShiftF6",
+    "ctrlv": "CtrlV",
+    "ctrlc": "CtrlC",
+    "ctrlz": "CtrlZ",
+    "ctrlx": "CtrlX",
+    "ctrls": "CtrlS",
+    "ctrld": "CtrlD",
+    "ctrlp": "CtrlP",
+    "ctrla": "CtrlA",
+    "gen1.5": "Gen1.5",
+    "gen2.5": "Gen2.5",
+    "gen2": "Gen2",
+    "gen1": "Gen1",
+    "imageto3d": "ImageTo3D",
+    "textto3d": "TextTo3D",
+    "assetsbreakdown": "AssetsBreakdown",
+    "assetbreakdown": "AssetBreakdown",
+    "quicksort": "QuickSort",
+    "openmodeldb": "OpenModelDB",
+    "formright": "FormRight",
+}
+
 # -- Protection zone patterns --
 PROTECTION_PATTERNS = [
     (re.compile(r'`[^`]+`'), '__CODE__'),
@@ -31,14 +69,9 @@ PROTECTION_PATTERNS = [
     (re.compile(r'/[^\s,;:!?）)"\']+(?=[\s,;:!?）)"\']|$)'), '__PATH__'),
     (re.compile(r'[A-Za-z]:\\[^\s,;:!?）)"\']+'), '__WPATH__'),
     (re.compile(r'(?<![A-Za-z0-9_])[pP](?:Cube|Sphere|Cylinder|Cone|Torus|Plane|Prism|Pipe)\d+(?![A-Za-z0-9_])'), '__MAYA_OBJ__'),
-    # Protected compound terms — prevent script-spacing from splitting them
+    # Protected compound terms — prevent script-spacing from splitting them (derived from CANONICAL_COMPOUNDS)
     (re.compile(
-        r'\b(?:Hyper3D|ComfyUI|TapNow|NanoBanana|BananaPro|ContentAware|'
-        r'TextureDelight|PureRef|FrontRight|MultiViewReference|'
-        r'ShiftF5|ShiftF4|ShiftF6|CtrlV|CtrlC|CtrlZ|CtrlX|CtrlS|CtrlD|CtrlP|CtrlA|'
-        r'Gen1\.5|Gen2\.5|Gen2|Gen1|'
-        r'ImageTo3D|TextTo3D|AssetsBreakdown|AssetBreakdown|'
-        r'QuickSort|OpenModelDB|FormRight)\b'
+        r'\b(?:' + '|'.join(re.escape(v) for v in CANONICAL_COMPOUNDS.values()) + r')\b'
     ), '__COMPOUND__'),
 ]
 
@@ -83,6 +116,16 @@ def _restore(text, mapping):
 def _apply_number_unit_compact(text):
     """Keep number+unit compact: 5GB → 5GB (not 5 GB)."""
     return COMPACT_PATTERN.sub(r'\1\2', text)
+
+
+def _collapse_cjk_spaces(text):
+    """Remove spaces between CJK characters.
+
+    中文语法不需要字间空格；中文间的空格只来自断行 join / 错误断句 / 人工疏漏
+    （如「不做\\n树」被 join 成「不做 树」）。移除 CJK↔CJK 之间的空格，
+    不影响 Latin/Digit/保护域。
+    """
+    return re.sub(r'(?<=[\u4e00-\u9fff\u3400-\u4dbf])\s+(?=[\u4e00-\u9fff\u3400-\u4dbf])', '', text)
 
 
 def _is_non_cjk_letter(ch):
@@ -147,22 +190,23 @@ def apply_spacing(line):
     line = line.rstrip('\n')
     text, mapping = _protect(line)
     text = _apply_script_spacing(text)
+    text = _collapse_cjk_spaces(text)
     text = _apply_number_unit_compact(text)
-    # Post-spacing fixup: re-glue known multi-word compounds that spacing may have split
+    # Post-spacing fixup: re-glue known multi-word compounds that spacing may have split (canonical source is CANONICAL_COMPOUNDS)
     FIXUP_COMPOUNDS = {
-        r'\bHyper 3D\b': 'Hyper3D',
+        r'\bHyper 3D\b': CANONICAL_COMPOUNDS["hyper3d"],
         r'\bImage 2 3D\b': 'Image To 3D',
-        r'\bGen 1\.5\b': 'Gen1.5',
-        r'\bGen 2\.5\b': 'Gen2.5',
-        r'\bNano Banana\b': 'NanoBanana',
+        r'\bGen 1\.5\b': CANONICAL_COMPOUNDS["gen1.5"],
+        r'\bGen 2\.5\b': CANONICAL_COMPOUNDS["gen2.5"],
+        r'\bNano Banana\b': CANONICAL_COMPOUNDS["nanobanana"],
         r'\bNano Banana Pro\b': 'NanoBanana Pro',
-        r'\bFront Right\b': 'FrontRight',
-        r'\bTexture Delight\b': 'TextureDelight',
-        r'\bMulti View Reference\b': 'MultiviewReference',
-        r'\bShift F 5\b': 'Shift F5',
-        r'\bShift F 4\b': 'Shift F4',
-        r'\bAssets Breakdown\b': 'AssetsBreakdown',
-        r'\bOpen Model DB\b': 'OpenModelDB',
+        r'\bFront Right\b': CANONICAL_COMPOUNDS["frontright"],
+        r'\bTexture Delight\b': CANONICAL_COMPOUNDS["texturedelight"],
+        r'\bMulti View Reference\b': CANONICAL_COMPOUNDS["multiviewreference"],
+        r'\bShift F 5\b': CANONICAL_COMPOUNDS["shiftf5"].replace("Shift", "Shift "),
+        r'\bShift F 4\b': CANONICAL_COMPOUNDS["shiftf4"].replace("Shift", "Shift "),
+        r'\bAssets Breakdown\b': CANONICAL_COMPOUNDS["assetsbreakdown"],
+        r'\bOpen Model DB\b': CANONICAL_COMPOUNDS["openmodeldb"],
     }
     for pattern, replacement in FIXUP_COMPOUNDS.items():
         text = re.sub(pattern, replacement, text)
