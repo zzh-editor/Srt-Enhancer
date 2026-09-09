@@ -746,33 +746,35 @@
 
 ### 领域感知大小写组（按领域组激活）
 
+> 专业 3D/媒体文件格式按官方写法统一：缩略格式名大写（OBJ/FBX/GLB/USD/STL 等），品牌混合写法保留（glTF、WebP）。排除项：Maya 场景 ma/mb（官方扩展名小写）、STEP（避免误伤英文词 step）。
+
 | 小写形式 | 标准写法 | 领域组 | 说明 |
 |---------|---------|--------|------|
-| obj | obj | file_format | File extension |
-| fbx | fbx | file_format | File extension |
-| gltf | gltf | file_format | File extension |
-| glb | glb | file_format | File extension |
-| usd | usd | file_format | File extension |
-| usdz | usdz | file_format | File extension |
-| dae | dae | file_format | File extension |
-| stl | stl | file_format | File extension |
-| abc | abc | file_format | File extension |
-| ma | ma | file_format | File extension |
-| mb | mb | file_format | File extension |
-| exr | exr | file_format | File extension |
-| tga | tga | file_format | File extension |
-| tiff | tiff | file_format | File extension |
-| bmp | bmp | file_format | File extension |
-| psd | psd | file_format | File extension |
-| webp | webp | file_format | File extension |
-| wav | wav | file_format | File extension |
-| mp3 | mp3 | file_format | File extension |
-| mp4 | mp4 | file_format | File extension |
-| mov | mov | file_format | File extension |
-| avi | avi | file_format | File extension |
-| mxf | mxf | file_format | File extension |
-| iges | iges | file_format | File extension |
-| step | step | file_format | File extension |
+| obj | OBJ | file_format | File extension |
+| fbx | FBX | file_format | File extension |
+| gltf | glTF | file_format | File extension |
+| glb | GLB | file_format | File extension |
+| usd | USD | file_format | File extension |
+| usdz | USDZ | file_format | File extension |
+| dae | DAE | file_format | File extension |
+| stl | STL | file_format | File extension |
+| abc | ABC | file_format | File extension |
+| ma | ma | file_format | Maya ASCII 场景；官方扩展名小写，不强制大写 |
+| mb | mb | file_format | Maya Binary 场景；官方扩展名小写，不强制大写 |
+| exr | EXR | file_format | File extension |
+| tga | TGA | file_format | File extension |
+| tiff | TIFF | file_format | File extension |
+| bmp | BMP | file_format | File extension |
+| psd | PSD | file_format | File extension |
+| webp | WebP | file_format | File extension |
+| wav | WAV | file_format | File extension |
+| mp3 | MP3 | file_format | File extension |
+| mp4 | MP4 | file_format | File extension |
+| mov | MOV | file_format | File extension |
+| avi | AVI | file_format | File extension |
+| mxf | MXF | file_format | File extension |
+| iges | IGES | file_format | File extension |
+| step | step | file_format | STEP (Standard for the Exchange of Product model data)；\\bstep\\b 会误伤英文词 step，故不自动大写 |
 | pbr | PBR | generic_acronym | Shading/standard term |
 | lod | LOD | generic_acronym | Level of Detail |
 | uv | UV | generic_acronym | UV coordinate |
@@ -1092,3 +1094,9 @@
 | 16比9 | 16:9 | 比例格式标准化 |
 | Tab Now | TapNow | AI 生图工具；Tab Now 为 Tap Now 的 ASR 变体 |
 | 白膜 | 白模 | 白模 = whitebox / clay render；同音字混淆 |
+| 沙漫 | 山脉 | Gaea 地形教学；ASR 误识别；用户确认修正 |
+| OPJ | obj | Gaea 地形教学；ASR 误识别；用户确认修正 |
+| 小写 obj | OBJ | 官方权威大写；用户确认修正（Wavefront OBJ 文件格式） |
+| 小写 fbx | FBX | 官方权威大写；用户确认修正（Autodesk FBX 文件格式） |
+| 小写 alt | Alt | 官方权威大写；用户确认修正（修饰键 Alt） |
+| 小写 f8 | F8 | 官方权威大写；用户确认修正（快捷键 F8） |
