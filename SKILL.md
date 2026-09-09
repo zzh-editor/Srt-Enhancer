@@ -70,15 +70,7 @@ The user uploads a `.srt` file directly via the dialog:
 
 ### 2. Confirm Mixed-Language Typesetting
 
-**🔴 CHECKPOINT · 🛑 STOP：** 用 Question 工具弹窗询问用户：
-- header: "中西文混排规范确认"
-- options:
-  - label: "保持默认开启" → description: "CJK-Latin 自动加空格，代码保护，数字单位紧凑"
-  - label: "关闭空格" → description: "不自动加中西文空格，其余处理照常"
-  - label: "自定义规则" → description: "稍后手动指定调整项"
-- multiple: false
-
-用户回答前不得默认进入处理流程（两种都不算回答：超时 / 用户发无关消息）。
+混排规范默认开启（CJK-Latin 自动加空格、代码保护、数字单位紧凑）。**不在本步单独弹窗**，与 §4 的领域检测合并为一次连续选择（见 §4，一次 Question 调用同时问两个问题）。
 
 去口癖、的得地、比例格式、去标点、快捷键为默认执行步骤，不逐一询问。
 
@@ -113,14 +105,24 @@ Override 后已匹配的领域提供 `search_context` 用于聚焦联网校准�
 
 🔴 domain override 后联网校准仍无匹配 → 查 Failure Handling 表「domain override 后匹配领域仍不准确」
 
-**🔴 CHECKPOINT · 🛑 STOP：** 将检测到的领域以对话正文报告用户，并用 Question 工具确认：
+**🔴 CHECKPOINT · 🛑 STOP：** 将检测到的领域以对话正文报告用户，并用 **一次 Question 工具调用弹两个问题（连续选择）**：
+
+问题 1 — 中西文混排规范确认（来自 §2）：
+- header: "中西文混排规范确认"
+- options:
+  - label: "保持默认开启" → description: "CJK-Latin 自动加空格，代码保护，数字单位紧凑"
+  - label: "关闭空格" → description: "不自动加中西文空格，其余处理照常"
+  - label: "自定义规则" → description: "稍后手动指定调整项"
+- multiple: false
+
+问题 2 — 领域检测确认：
 - header: "领域检测确认"
 - options:
   - label: "正确" → description: "领域匹配，继续进入 Config 构建"
   - label: "不正确" → description: "手动指正领域，AI 修正后再进入下一步"
 - multiple: false
 
-用户回答前不得默认进入 Config 构建流程（超时或发无关消息不算回答）。
+两个问题都回答前不得默认进入 Config 构建流程（超时或发无关消息不算回答）。两个答案互不依赖，合并提问不影响后续步骤：混排答案只作用于 enhance.py 的 spacing 步骤，领域答案作用于 config，二者都在 §5 Config 构建前就位。
 
 ### 5. AI Prepares Config & Overrides
 
@@ -251,7 +253,14 @@ AI overrides only when **all** conditions met:
 - 合并后行若超长，以语义断点重新拆分；不改动其他段的时间轴
 - 标注 `英文残片合并` 类型，进入 diff 审核表（置信度 ≥90%）
 
-**d. Confidence Scoring:**
+**d. English term annotation（英文术语中文括注，教学演示用）:**
+- 在中文字幕里的英文专业术语后紧跟 `(中文)` 括注，不空格，如 `joint chain(关节链)`、`position based simulation(基于位置的模拟)`
+- 触发：只在用户明确要求（"术语加注释" / "加中文翻译标注"）时执行；默认不标注，避免污染正常字幕
+- 判定术语：仅长单词/术语（≥2 个词的短语或 ≥4 字母的实义词），跳过：单字母变量（`x`/`K`/`v`）、缩写（`AI`/`UE`/`OK`）、代码/公式/路径保护域、已括注过的
+- 翻译来源：correction-table 的`正确术语→中文`列优先，其次领域词汇表，未命中用通用含义
+- 该步骤是 AI 语义判断，不作为确定性脚本，产出进入 diff 审核表（类型 `术语括注`）
+
+**e. Confidence Scoring:**
 Use `scripts/confidence_scorer.py` for deterministic scoring:
 
 ```python
@@ -569,7 +578,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
                           │
                           ▼
                 AI Review Phase (1-2 rounds)
-   title_marker.py → 英文残片扫描 → confidence_scorer.py → diff 审核 →
+   title_marker.py → 英文残片扫描 → [可选]术语括注 → confidence_scorer.py → diff 审核 →
    用户确认 → 写入输出 → 修正持久化到 correction-table.md
 │
                           ▼
