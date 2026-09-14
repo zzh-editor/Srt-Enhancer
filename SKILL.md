@@ -122,7 +122,14 @@ Override 后已匹配的领域提供 `search_context` 用于聚焦联网校准�
   - label: "不正确" → description: "手动指正领域，AI 修正后再进入下一步"
 - multiple: false
 
-两个问题都回答前不得默认进入 Config 构建流程（超时或发无关消息不算回答）。两个答案互不依赖，合并提问不影响后续步骤：混排答案只作用于 enhance.py 的 spacing 步骤，领域答案作用于 config，二者都在 §5 Config 构建前就位。
+问题 3 — 术语括注（可选）：
+- header: "术语括注开关"
+- options:
+  - label: "开启" → description: "英文专业术语后加(中文)括注，如 joint chain(关节链)，供教学演示"
+  - label: "不开启" → description: "默认状态，不添加任何括注，避免污染字幕"
+- multiple: false
+
+两个问题都回答前不得默认进入 Config 构建流程（超时或发无关消息不算回答）。三个答案互不依赖，合并提问不影响后续步骤：混排答案只作用于 enhance.py 的 spacing 步骤，领域答案作用于 config，括注答案作用于 §7 的术语括注步骤；三者都在 §5 Config 构建前就位。
 
 ### 5. AI Prepares Config & Overrides
 
@@ -255,7 +262,7 @@ AI overrides only when **all** conditions met:
 
 **d. English term annotation（英文术语中文括注，教学演示用）:**
 - 在中文字幕里的英文专业术语后紧跟 `(中文)` 括注，不空格，如 `joint chain(关节链)`、`position based simulation(基于位置的模拟)`
-- 触发：只在用户明确要求（"术语加注释" / "加中文翻译标注"）时执行；默认不标注，避免污染正常字幕
+- 触发：§4 弹窗「术语括注开关」选"开启"，或用户明确要求（"术语加注释" / "加中文翻译标注"）时执行；默认不标注，避免污染正常字幕
 - 判定术语：仅长单词/术语（≥2 个词的短语或 ≥4 字母的实义词），跳过：单字母变量（`x`/`K`/`v`）、缩写（`AI`/`UE`/`OK`）、代码/公式/路径保护域、已括注过的
 - 翻译来源：correction-table 的`正确术语→中文`列优先，其次领域词汇表，未命中用通用含义
 - 该步骤是 AI 语义判断，不作为确定性脚本，产出进入 diff 审核表（类型 `术语括注`）
@@ -579,7 +586,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
                           ▼
                 AI Review Phase (1-2 rounds)
    title_marker.py → 英文残片扫描 → [可选]术语括注 → confidence_scorer.py → diff 审核 →
-   用户确认 → 写入输出 → 修正持久化到 correction-table.md
+   用户确认 → 写入输出 → `scripts/audit.py` 防复发审计（ERROR 词条/点链丢失）→ 修正持久化到 correction-table.md
 │
                           ▼
               `{源文件名}_Enhancer.srt`

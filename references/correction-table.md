@@ -12,7 +12,6 @@
 
 | ASR 误识别 | 正确术语 | 说明 |
 |-----------|---------|------|
-| make | Maya | 发音相似（注意：不匹配代码中的 My 前缀变量名） |
 | mayor | Maya | 发音相似 |
 | maya | Maya | 大小写修正 |
 
@@ -184,7 +183,7 @@
 | uncensored swap | ancestor swap | ancestor 被误识别为 uncensored |
 | an sensor swap | ancestor swap | ancestor 被误识别为 an sensor |
 | drawn based | joint-based | 基于关节的（肌肉绑定技术） |
-| width | weights | 蒙皮权重，骨骼对顶点的影响权重值 |
+| width | weights ⚠️仅上下文判断 | 该替换过杀（width/size 普通宽度语义经常中招）；由 AI 层按上下文替换，不进全局自动表 |
 | skin width | skin weights | 蒙皮权重，完整写法 |
 | pinned | painted | painted weights，Maya中手动绘制权重 |
 | inference | influence | 影响（骨骼对顶点的影响范围） |
@@ -1100,3 +1099,15 @@
 | 小写 fbx | FBX | 官方权威大写；用户确认修正（Autodesk FBX 文件格式） |
 | 小写 alt | Alt | 官方权威大写；用户确认修正（修饰键 Alt） |
 | 小写 f8 | F8 | 官方权威大写；用户确认修正（快捷键 F8） |
+| 冲破发挥一下自己想法 | 充分发挥一下自己的想法 | 虚幻插件开发教程；ASR 误识别；用户确认修正 |
+| 复旅行每块岩石中的接缝 | 修复每块岩石中的接缝 | 虚幻插件开发教程；ASR 误识别；用户确认修正 |
+| 定业制 | 订阅制 | 虚幻插件开发教程；用户确认修正 |
+| 是否多金 | 是否搞定 | 虚幻插件开发教程；ASR 误识别；用户确认修正 |
+| 我们的这边 | 我们这边 | 口语冗余；用户确认修正 |
+| 不同的种石头 | 不同的石头 | 口语冗余；用户确认修正 |
+| 虚幻物查解 | 虚幻 5 插件 | 虚幻插件开发教程；用户确认修正 |
+| reduit | redo | Maya 编程课；redo 与 undo 成对（撤销/重做）；用户确认修正 |
+| undoit | undo it | Maya 编程课；redo 与 undo 成对（撤销/重做）；用户确认修正 |
+| infine | influence | Maya 蒙皮课；骨骼对顶点的影响（shadow weights）；用户确认修正 |
+| Pico | pickle | Python pickle 二进制序列化；官方文档确认；用户确认修正 |
+| leasing | listing | 语境为路径项枚举（listing）；用户确认修正 |

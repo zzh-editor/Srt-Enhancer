@@ -159,7 +159,9 @@ def load_terminology(path: Path = TERMINOLOGY_PATH) -> dict[str, str]:
     if not path.exists():
         return mapping
 
-    skip_correct_markers = ["正确", "✅", "无需修正"]
+    # ⚠️仅上下文判断 = 降级条目：全局替换过杀（如 width→weights），
+    # 交给 AI 审查层按语境决定，不进自动替换映射。
+    skip_correct_markers = ["正确", "✅", "无需修正", "仅上下文判断"]
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
             cells = _split_markdown_row(line)
@@ -461,6 +463,11 @@ def step_ratio_format(segments: list[dict], config: dict) -> list[dict]:
 
 # ── Fuzzy matching helper ─────────────────────────────────────────
 
+def _is_simple_token(s: str) -> bool:
+    """单 token（纯字母数字下划线，无空格/无 CJK/无标点）。"""
+    return bool(re.fullmatch(r'[A-Za-z0-9_]+', s))
+
+
 def _try_replace(text: str, asr_text: str, correct_text: str,
                  mode: str = "auto") -> str | None:
     """If asr_text matches text at given fuzziness, return corrected text.
@@ -468,15 +475,25 @@ def _try_replace(text: str, asr_text: str, correct_text: str,
     Priority: exact substring → case-insensitive → normalized.
     Returns None if no match.
     """
+    # 单 token 拉丁词需词边界，防子串误伤（eve→EV 误伤 whatever、
+    # join→joint 误伤 jointt/join4、ps→Photoshop 误伤 psphere1）。
+    # 多词短语/CJK 词条维持原子串匹配。
+    bound = (r'(?<![A-Za-z0-9_])' + re.escape(asr_text) + r'(?![A-Za-z0-9_])'
+             if _is_simple_token(asr_text) else None)
+
     # Level 1: exact
-    if asr_text in text:
+    if bound is not None:
+        pattern = re.compile(bound)
+        if pattern.search(text):
+            return pattern.sub(correct_text, text)
+    elif asr_text in text:
         return text.replace(asr_text, correct_text)
 
     if mode == "exact":
         return None
 
     # Level 2: case-insensitive
-    pattern = re.compile(re.escape(asr_text), re.IGNORECASE)
+    pattern = re.compile(bound or re.escape(asr_text), re.IGNORECASE)
     if pattern.search(text):
         return pattern.sub(correct_text, text)
 
@@ -492,8 +509,12 @@ def _try_replace(text: str, asr_text: str, correct_text: str,
         # 覆盖中文术语（如 30图→三视图，tokenize 会把中文丢光导致不落地）与
         # 英文多词/CamelCase（原有逻辑的泛化）。
         sep = r'[\s\-_.,;:/]*'
+        core = sep.join(re.escape(ch) for ch in asr_text)
+        is_tok = _is_simple_token(asr_text)
         flexible = re.compile(
-            sep.join(re.escape(ch) for ch in asr_text), re.IGNORECASE
+            (r'(?<![A-Za-z0-9_])' if is_tok else '') + core
+            + (r'(?![A-Za-z0-9_])' if is_tok else ''),
+            re.IGNORECASE,
         )
         if flexible.search(text):
             return flexible.sub(correct_text, text)
@@ -606,9 +627,15 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
     for p in preserve:
         preserve_chars.update(p)
 
-    dot_re = re.compile(r"(?<!\d)\.(?!\d|com|net|org|edu|cn|io|ai|app|dev)")
-    CJK = r'[\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef\u3000-\u303f]'
+    CJK_RANGES = r'\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef\u3000-\u303f'
     PUNCT = r'[\u3000-\u303f\uff00-\uffef!"#$%&\'()*+,\-./:;<=>?@\[\\\]^_`{|}~]+'
+
+    # 仅删除邻接 CJK 的点（中文语境误录的英文句号）。
+    # 之前 (?<!\d)\.(?!\d|com|...) 会把 MC.skinweight.io 等点链
+    # 无差别删掉；改为只删 CJK 邻接点后，代码标识符点链不再受影响。
+    dot_re = re.compile(
+        rf'(?<=[{CJK_RANGES}])\.|\.(?=[{CJK_RANGES}])'
+    )
 
     for seg in segments:
         text = seg["text"]
@@ -648,8 +675,8 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
 
         # Replace punctuation only when adjacent to CJK characters
         # (?<![a-zA-Z0-9]) guards protect patterns like A/B, C#, 10.000 between Latin/digits
-        text = re.sub(rf'({CJK})({PUNCT})', r'\1 ', text)
-        text = re.sub(rf'(?<![a-zA-Z0-9])({PUNCT})({CJK})', r' \2', text)
+        text = re.sub(rf'([{CJK_RANGES}])({PUNCT})', r'\1 ', text)
+        text = re.sub(rf'(?<![a-zA-Z0-9])({PUNCT})([{CJK_RANGES}])', r' \2', text)
         if config.get("dot_preserve", True):
             text = dot_re.sub(" ", text)
         text = re.sub(r'[ \t]+', ' ', text)
