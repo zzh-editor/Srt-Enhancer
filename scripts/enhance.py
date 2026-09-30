@@ -311,6 +311,9 @@ def step_defiller(segments: list[dict], config: dict) -> list[dict]:
     # Tier definitions (align with DEFAULT_CONFIG filler_words)
     HIGH_FILLERS = {"嗯", "呃", "噢", "唔", "欸", "哎", "嘿"}
     MEDIUM_FILLERS = {"啊", "哦", "嘛", "吧", "呢", "啦", "哈", "哟", "喔"}
+    # 句法语气词：任何位置（句首/句尾/中置）都不删，宁可少删
+    MODAL_KEEP = {"吧", "吗", "嘛", "呢"}
+    MEDIUM_FILLERS -= MODAL_KEEP
     # Tail / discourse protection: must not be altered (宁可少删)
     TAIL_PROTECT = ["好吧", "是吧", "对吧", "怎么办呢", "是啊", "知道吗"]
     protected_pool = list(dict.fromkeys(markers + TAIL_PROTECT))
@@ -357,7 +360,7 @@ def step_defiller(segments: list[dict], config: dict) -> list[dict]:
             text = re.sub(rf"\s+{re.escape(f)}\s+", " ", text)
 
         # Also handle any remaining filler_words not covered by High/Medium (fallback to leading/trailing)
-        remaining_fillers = set(config.get("filler_words", [])) - HIGH_FILLERS - MEDIUM_FILLERS
+        remaining_fillers = set(config.get("filler_words", [])) - HIGH_FILLERS - MEDIUM_FILLERS - MODAL_KEEP
         for f in remaining_fillers:
             while text.startswith(f):
                 text = text[len(f):].lstrip()

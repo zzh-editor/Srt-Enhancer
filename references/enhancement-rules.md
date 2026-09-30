@@ -25,18 +25,19 @@ These are vocal hesitations with no lexical meaning — always remove.
 | 欸 | 欸不对 | 不对 |
 | 嘿 | 嘿你知道吗 | 你知道吗 |
 
-#### Meaningless Sentence-Final Particles (无意义句末语气词)
-Remove when they don't carry grammatical or emotional meaning.
+#### Sentence-Final Particles (句末语气词)
+句法语气词（吧、吗、嘛、呢）**任何位置都不删**——句首、句尾、标点前后都保留，宁可少删。其余语气词视是否携带语义判断：
 
 | Filler | Remove? | Example |
 |--------|---------|---------|
-| 嘛 | Usually yes | 就是嘛 → 就是 |
+| 嘛 | **Keep**（句法语气词，表理所当然） | 就是嘛 → 保留 |
+| 吗 | **Keep**（疑问标记） | 你去吗 → 保留 |
+| 呢 | **Keep**（句法语气词） | 怎么办呢 → 保留 |
+| 吧 | **Keep**（句法语气词，表建议/揣测） | 我们走吧 → 保留 |
 | 啦 | Usually yes | 好啦 → 好 |
 | 哈 | Usually yes | 对哈 → 对 |
 | 哟 | Usually yes | 快哟 → 快 |
 | 喔 | Usually yes | 是喔 → 是 |
-| 呢 | Context-dependent | See rules below |
-| 吧 | Context-dependent | See rules below |
 
 #### Filler Phrases (口头禅短语)
 Common spoken filler phrases that add no meaning:
@@ -45,14 +46,13 @@ Common spoken filler phrases that add no meaning:
 |--------------|---------------|---------------|
 | 那个 | 我觉得那个就是说 | 我觉得就是说 |
 | 就是说 | 就是说我想要 | 我想要 |
-| 你知道吗 | 你知道吗这个 | 这个 |
-| 怎么说呢 | 怎么说呢这个功能 | 这个功能 |
 | 就是说 | 就是说我们可以 | 我们可以 |
 
-**不要视为口癖** — 以下属于自然话语标记（Discourse Markers），是中文口语中的惯用连接和过渡手段，不应删减：
+**不要视为口癖** — 以下属于自然话语标记（Discourse Markers）或含句法语气词，是中文口语中的惯用连接和过渡手段，不应删减：
 - **也就是说、然后**（表承接/递进）、**那么、那**（句首引入话题）
 - **说白了**（换言标记）、**对吧**（确认标记）、**好吧**（让步标记）
 - **的话**（话题标记，如"技术美术的话"）
+- **你知道吗、怎么说呢**（含 句法语气词 吗/呢，代码层 TAIL_PROTECT 保护，不删）
 
 ### 1.2 Removal Rules
 
@@ -82,21 +82,22 @@ After:  (empty — remove entire segment if no meaningful content)
 
 #### Rule 4: Filler Before Punctuation
 When a filler appears right before punctuation, remove both the filler and adjust spacing.
+例外：句法语气词（吧/吗/嘛/呢）即使紧贴标点也不删。
 
 ```
 Before: 这个功能很好啊，对吧
 After:  这个功能很好，对吧
 ```
 
-#### Rule 5: Preserve Meaningful Particles
-**DO NOT remove** particles that carry grammatical meaning:
+#### Rule 5: Preserve Modal Particles (保留句法语气词)
+**吧、吗、嘛、呢 一律不删**——不论在句首、句尾还是句中。它们是句子的语法成分（疑问/建议/揣测/理所当然），不是口癖：
 
 - **吗** (question particle): 你去吗？ → Keep
 - **的** (possessive/descriptive): 我的 → Keep
 - **了** (completed action): 吃了 → Keep
-- **呢** when used for questions: 怎么了呢？ → Keep
-- **吧** when indicating suggestion: 我们走吧 → Keep
-- **呢** when used for comparison: 比昨天好呢 → Keep
+- **呢**: 怎么了呢？/ 怎么办呢 → Keep
+- **吧**: 我们走吧 → Keep
+- **嘛**: 就是嘛 → Keep
 
 #### Rule 6: Never Delete Meaningful Lexical Words
 
