@@ -1111,3 +1111,48 @@
 | infine | influence | Maya 蒙皮课；骨骼对顶点的影响（shadow weights）；用户确认修正 |
 | Pico | pickle | Python pickle 二进制序列化；官方文档确认；用户确认修正 |
 | leasing | listing | 语境为路径项枚举（listing）；用户确认修正 |
+
+## 用户确认修正
+
+| asr | correct | 来源 |
+|-----|---------|------|
+| U-Pin | UPenn | 用户确认修正 |
+| Dartmos | Dartmouth | 用户确认修正 |
+| 乡边分校 | 香槟分校 | 用户确认修正 |
+| 遇三家 | 御三家 | 用户确认修正 |
+| 育三家 | 御三家 | 用户确认修正 |
+| 腾效 | 藤校 | 用户确认修正 |
+| 机战机学院 | 工程学院 | 用户确认修正 |
+| 无趣多言 | 无需多言 | 用户确认修正 |
+| 建厂盖学校 | 见长的学校 | 用户确认修正 |
+| 文明应该是 | 闻名应该是 | 用户确认修正 |
+| EOS News | US News | 用户确认修正 |
+| 麦克思学员 | 麦克斯学员 | 用户确认修正 |
+| 录率 | 录取率 | 用户确认修正 |
+| T式艺术学院 | 蒂施艺术学院 | 用户确认修正 |
+| 报学 | 暴雪 | 用户确认修正 |
+| 非本周 | 非本州 | 用户确认修正 |
+| 程技术美术 | 技术美术 | 用户确认修正 |
+| CSBA | BCSA | 用户确认修正 |
+| 二期Four | 27 Fall | 用户确认修正 |
+| s tylist game | stylized game | 用户确认修正 |
+| 生存出来 | 生成出来 | 用户确认修正 |
+| 贴书材质 | 贴图材质 | 用户确认修正 |
+| 气质上 | 细节上 | 用户确认修正 |
+| trapesius muscles / trap esius muscles | trapezius muscles | 联网校准+用户确认修正 |
+| Trapidus muscle / Trap idus muscle / trapiece | trapezius muscle | 联网校准+用户确认修正 |
+| muscle region | muscle origin | Maya 术语一致性（origin/insertion/center），联网确认 |
+| mc.create node | mc.createNode | Maya cmds API 联网确认 |
+| 反腐归真 / 反补归真 | 返璞归真 | 成语错别字，用户确认 |
+| dnd | data node | 精校对照确认（Maya 数据节点，非 DNS），原推断 DNS 已纠正 |
+| picoobject | pickle object | pickle 语境，用户确认 |
+| 你可以列为它 | 你可以理解为它 | ASR 错别字，用户确认 |
+| 但是对我我上班的人 | 但是对于我们上班的人 | ASR 重复字，用户确认 |
+| 我们他每个 | 我们看每个 | AI 推断，用户确认 |
+| 你一看到我这里 | 你可以看到我这里 | 精校对照 |
+| 带了学生两个方法 | 带给学生两个方法 | 精校对照 |
+| 算完那个 | 上完那一课 | 精校对照 |
+| 再给就是一个方向 | 再给大家就是一个方向 | 精校对照 |
+| 可以跟我讨论一下 | 也可以跟我讨论一下 | 精校对照 |
+| 以维护是最重要的 | 易维护 是最重要的 | 精校对照（断句同步为「…简单 易维护」|「是最重要的」） |
+| trip licitmask | trapezius | 精校对照（「再解析成这 trapezius」ASR 严重变形） |
