@@ -117,16 +117,14 @@ def parse_srt(path: str) -> list[dict]:
 def write_srt(segments: list[dict], path: str):
     with open(path, "w", encoding="utf-8") as f:
         for i, seg in enumerate(segments, 1):
-            start = seg["start"]
-            end = seg["end"]
-            sh = int(start // 3600)
-            sm = int((start % 3600) // 60)
-            ss = int(start % 60)
-            sms = int((start - int(start)) * 1000)
-            eh = int(end // 3600)
-            em = int((end % 3600) // 60)
-            es = int(end % 60)
-            ems = int((end - int(end)) * 1000)
+            start_ms = max(0, round(seg["start"] * 1000))
+            end_ms = max(0, round(seg["end"] * 1000))
+            sh, start_ms = divmod(start_ms, 3_600_000)
+            sm, start_ms = divmod(start_ms, 60_000)
+            ss, sms = divmod(start_ms, 1000)
+            eh, end_ms = divmod(end_ms, 3_600_000)
+            em, end_ms = divmod(end_ms, 60_000)
+            es, ems = divmod(end_ms, 1000)
             f.write(f"{i}\n")
             f.write(f"{sh:02d}:{sm:02d}:{ss:02d},{sms:03d} --> "
                     f"{eh:02d}:{em:02d}:{es:02d},{ems:03d}\n")
@@ -315,7 +313,8 @@ def step_defiller(segments: list[dict], config: dict) -> list[dict]:
     MODAL_KEEP = {"吧", "吗", "嘛", "呢"}
     MEDIUM_FILLERS -= MODAL_KEEP
     # Tail / discourse protection: must not be altered (宁可少删)
-    TAIL_PROTECT = ["好吧", "是吧", "对吧", "怎么办呢", "是啊", "知道吗"]
+    TAIL_PROTECT = ["好吧", "是吧", "对吧", "怎么办呢", "是啊", "知道吗",
+                    "哎呀", "哎哟", "哎呦", "嘿嘿", "嗯哼", "噢耶"]
     protected_pool = list(dict.fromkeys(markers + TAIL_PROTECT))
 
     for seg in segments:
@@ -333,13 +332,14 @@ def step_defiller(segments: list[dict], config: dict) -> list[dict]:
                 protect_map[ph] = phrase
                 text = text.replace(phrase, ph)
 
-        # A: high-confidence fillers — aggressive global removal (inside CJK included)
+        # A: high-confidence fillers — remove utterance-leading or clearly isolated sounds.
         for f in HIGH_FILLERS:
-            if f in text:
-                # also strip leading runs that may have been produced
-                while text.startswith(f):
-                    text = text[len(f):].lstrip()
-                text = text.replace(f, "")
+            while text.startswith(f):
+                text = text[len(f):].lstrip()
+            text = re.sub(
+                rf"(?<![\u4e00-\u9fff\u3400-\u4dbf]){re.escape(f)}"
+                rf"(?![\u4e00-\u9fff\u3400-\u4dbf])", "", text,
+            )
 
         # B: medium fillers — position + context sensitive
         for f in MEDIUM_FILLERS:

@@ -5,8 +5,8 @@ Deterministic SRT → vertical (9:16) subtitle re-segmentation.
 Applies a semantic split plan (produced by AI) to an enhanced SRT:
 - Each original segment is split into short chunks (typically 4-12 chars),
   each chunk being a complete semantic unit (动宾/主谓/短语/连接词后断句)
-- Timestamps are redistributed within the original segment proportionally
-  to each chunk's character count, so the whole timeline is preserved
+- Word timestamps are used when they align exactly; otherwise timestamps are
+  redistributed proportionally to each chunk's character count
 - Chunks whose concatenation does not reproduce the original text are
   rejected and the segment is left untouched (content fidelity)
 
@@ -83,16 +83,14 @@ def parse_srt(path: str) -> list[dict]:
 def write_srt(segments: list[dict], path: str):
     with open(path, "w", encoding="utf-8") as f:
         for i, seg in enumerate(segments, 1):
-            start = seg["start"]
-            end = seg["end"]
-            sh = int(start // 3600)
-            sm = int((start % 3600) // 60)
-            ss = int(start % 60)
-            sms = int((start - int(start)) * 1000)
-            eh = int(end // 3600)
-            em = int((end % 3600) // 60)
-            es = int(end % 60)
-            ems = int((end - int(end)) * 1000)
+            start_ms = max(0, round(seg["start"] * 1000))
+            end_ms = max(0, round(seg["end"] * 1000))
+            sh, start_ms = divmod(start_ms, 3_600_000)
+            sm, start_ms = divmod(start_ms, 60_000)
+            ss, sms = divmod(start_ms, 1000)
+            eh, end_ms = divmod(end_ms, 3_600_000)
+            em, end_ms = divmod(end_ms, 60_000)
+            es, ems = divmod(end_ms, 1000)
             f.write(f"{i}\n")
             f.write(f"{sh:02d}:{sm:02d}:{ss:02d},{sms:03d} --> "
                     f"{eh:02d}:{em:02d}:{es:02d},{ems:03d}\n")
@@ -133,7 +131,7 @@ def _heuristic_split(text: str, max_chars: int) -> list[str]:
 
 def split_segment(seg: dict, chunks: list[str], min_ms: int = DEFAULT_MIN_MS
                   ) -> list[dict]:
-    """Split one segment into timed chunks proportional to char count.
+    """Split one segment at aligned word boundaries, or by character proportion.
 
     Invariant: 文本完整性 > 时间合法性 > 最短时长偏好。
     Any split that would silently drop characters falls back to the original segment.
@@ -151,6 +149,35 @@ def split_segment(seg: dict, chunks: list[str], min_ms: int = DEFAULT_MIN_MS
     total_chars = sum(_visible_len(c) for c in chunks)
     if total_chars == 0:
         return [dict(seg)]
+
+    words = seg.get("words", [])
+    if words:
+        word_text = "".join(_norm(w.get("word", "")) for w in words)
+        if word_text == _norm(seg["text"]):
+            boundaries = {}
+            offset = 0
+            for word in words:
+                text = _norm(word.get("word", ""))
+                start, end = word.get("start"), word.get("end")
+                if not text or start is None or end is None or end <= start:
+                    continue
+                offset += len(text)
+                boundaries[offset] = min(max(end, seg["start"]), seg["end"])
+            if offset == _visible_len(seg["text"]):
+                out = []
+                cursor = seg["start"]
+                chunk_offset = 0
+                for index, chunk in enumerate(chunks):
+                    chunk_offset += _visible_len(chunk)
+                    end = (seg["end"] if index == len(chunks) - 1
+                           else boundaries.get(chunk_offset))
+                    if end is None or end <= cursor:
+                        return [dict(seg)]
+                    out.append({"idx": seg["idx"], "start": cursor,
+                                "end": end, "text": chunk})
+                    cursor = end
+                if len(out) == len(chunks) and chunk_offset == offset:
+                    return out
 
     # Effective min_dur: compress if chunks * min_ms would exceed total_dur
     # so that no chunk is silently dropped.
@@ -213,6 +240,19 @@ def apply_splits(segments: list[dict], splits: dict, max_chars: int,
     return out
 
 
+def attach_word_timestamps(segments: list[dict], word_segments: list[dict]) -> None:
+    """Attach words from the transcript export when cue bounds still match."""
+    for seg in segments:
+        candidates = [
+            source for source in word_segments
+            if source.get("words")
+            and abs(source.get("start", 0) - seg["start"]) <= 0.1
+            and abs(source.get("end", 0) - seg["end"]) <= 0.1
+        ]
+        if len(candidates) == 1:
+            seg["words"] = candidates[0]["words"]
+
+
 # ── CLI ─────────────────────────────────────────────────────────────
 
 def main():
@@ -222,6 +262,8 @@ def main():
     parser.add_argument("input", help="input SRT file (enhanced)")
     parser.add_argument("--splits", default=None,
                         help="JSON file of semantic split plan {idx: [chunk,...]}")
+    parser.add_argument("--words-json", default=None,
+                        help="<output>.words.json from video-transcribe for word-aligned timing")
     parser.add_argument("-o", "--output", default=None,
                         help="output SRT path")
     parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS,
@@ -235,6 +277,10 @@ def main():
     if not segments:
         print(f"error: no valid segments in {args.input}", file=sys.stderr)
         sys.exit(1)
+
+    if args.words_json:
+        with open(args.words_json, "r", encoding="utf-8") as f:
+            attach_word_timestamps(segments, json.load(f))
 
     splits: dict = {}
     if args.splits:

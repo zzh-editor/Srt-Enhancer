@@ -14,7 +14,7 @@ This skill provides an AI-driven workflow for enhancing SRT subtitle files. The 
 ## Purpose
 
 Enhance SRT subtitle files by:
-- Removing filler words and vocal hesitations (口癖词): 啊、哦、嗯、呃、哎、嘛、吧、呢、啦、哈、噢、唔、欸
+- Removing clearly isolated filler words and vocal hesitations (口癖词); preserve CJK-embedded sounds and meaningful interjections
 - Correcting typos and transcription errors
 - Merging English word remnants split by ASR (offer → off + er → rejoin)
 - Standardizing proper nouns and terminology
@@ -45,7 +45,7 @@ Use this skill when the user mentions or uploads files related to:
 
 ## Enhancement Principles
 
-1. **时间轴与保真**：不改时间戳/编号；只清洗不新增，不删有意义内容（的/了/吗等虚词保留）
+1. **时间轴与保真**：不改时间戳/编号；只清洗不新增，不删有意义内容（的/了/吗等虚词保留）；口癖脚本仅删句首或有明确分隔的声音，CJK 连写中的字符保留
 2. **对照表优先**（`overrides` > `correction-table.md` > 领域联网校准 `search_context` > AI 猜测❗）：前两级 `auto` 三级匹配（精确→大小写→归一化），未命中才联网
 3. **Hybrid AI + Script**（2-4 轮 vs 15-20 轮）：AI 负责语言/联网/配 config/复核；`enhance.py` 负责确定性流水线 `normalize→terminology→spacing→capitalization→terminology→finalize`；`domain_scanner/title_marker/confidence_scorer` 各司其职
 4. **可信度与复用**：每处修改打分（≥90高/70-89中/50-69低/<50跳过），低分必审；用户确认的修正持久化到 `references/correction-table.md`
@@ -395,8 +395,10 @@ Save the enhanced result after user confirmation of the diff review:
    - 已足够短的行（≤12 字）不进计划
 3. **执行 `scripts/vertical.py`** 应用计划并重排时间轴：
    ```bash
-   python3 scripts/vertical.py input_Enhancer.srt --splits plan.json -o 输出.srt
+   python3 scripts/vertical.py input_Enhancer.srt --splits plan.json \
+     --words-json raw.srt.words.json -o 输出.srt
    ```
+   - `--words-json` 传入 `video-transcribe` 导出的词级时间文件。SRT 字幕文本与词级时间能逐字对齐时按真实词边界分配时间；文本有改动或无法对齐时回退字符比例估时。
    - 计划内 chunk 拼接与原文不一致 → 该条自动跳过
    - 无计划时回退到 `--max-chars 12` 的标点感知硬切
 4. **输出命名**：`{源文件名}_竖屏.srt`，与增强文件同目录
@@ -568,7 +570,7 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 - **`scripts/confidence_scorer.py`** - Deterministic confidence scoring. Provides `score(source, sub_type)` → `(value, reason)`.
 - **`scripts/title_marker.py`** - Game/media title marking with 《》。（P1-2 Contract：行级高精确首遍，AI scan 文档级补全。Usage: `cat text_lines | python3 title_marker.py`）
 - **`scripts/casing_verify.py`** - Maintenance helper: verify standard casing via heuristics + Wikipedia, output rows to append to `correction-table.md`「大小写校准」。(P2-2 维护用途，已更新文案为 `cap_map/case_groups`。)
-- **`scripts/vertical.py`** - Vertical (9:16) re-segmentation. Applies an AI semantic split plan and redistributes timestamps proportionally to char count. Usage: `python3 scripts/vertical.py input.srt --splits plan.json -o output.srt`
+- **`scripts/vertical.py`** - Vertical (9:16) re-segmentation. Uses aligned word timestamps when available, otherwise redistributes timestamps proportionally to char count. Usage: `python3 scripts/vertical.py input.srt --splits plan.json --words-json input.srt.words.json -o output.srt`
 - **`scripts/setup.sh`** - Dependency auto-install script. Ensures pyyaml is available.
 
 ## Workflow Summary

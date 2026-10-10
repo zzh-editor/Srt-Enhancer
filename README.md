@@ -75,7 +75,7 @@ Agent：检测领域 → 构建配置 → 执行 6 步流水线 → 生成 diff 
 规则：每行 4-12 字（目标约 8 字），断在语义边界（动宾/主谓/连接词后），时间轴按各 chunk 字数比例在原段内重排。仅做断句和时间轴重排，不改文本。
 
 ```bash
-python3 scripts/vertical.py input_Enhancer.srt --splits plan.json -o output_竖屏.srt
+python3 scripts/vertical.py input_Enhancer.srt --splits plan.json --words-json raw.srt.words.json -o output_竖屏.srt
 ```
 
 AI 先生成语义断句计划（JSON，`{"1": ["chunk1", "chunk2"], ...}`），脚本应用计划并重排时间轴；chunk 拼接回原文不一致时自动跳过该条，无计划时回退按 12 字标点感知硬切。

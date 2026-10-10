@@ -11,7 +11,7 @@ This document provides detailed rules for enhancing SRT subtitles, including fil
 ### 1.1 Categories of Filler Words
 
 #### Hesitation Sounds (犹豫声)
-These are vocal hesitations with no lexical meaning — always remove.
+These are vocal hesitations with no lexical meaning. Remove them when they are clearly isolated; preserve CJK-embedded sounds and conventional interjections when the text alone cannot distinguish them safely.
 
 | Filler | Example Before | Example After |
 |--------|---------------|---------------|
@@ -55,6 +55,8 @@ Common spoken filler phrases that add no meaning:
 - **你知道吗、怎么说呢**（含 句法语气词 吗/呢，代码层 TAIL_PROTECT 保护，不删）
 
 ### 1.2 Removal Rules
+
+确定性脚本只删除句首口癖和由空格/标点明确隔开的口癖音。连续中文中的同形字符默认保留，交由上下文复核，避免从词语或感叹语中误删单字。
 
 #### Rule 1: Standalone Filler Removal
 When a filler word appears alone (not part of a meaningful word), remove it entirely.
