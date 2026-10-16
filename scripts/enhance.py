@@ -527,9 +527,27 @@ def _try_replace(text: str, asr_text: str, correct_text: str,
 
 # ── Step: terminology replacement ──────────────────────────────────
 
+# ── 表格条目的语言闸门 ──────────────────────────────────────────────
+#
+# correction-table.md 与「大小写校准」里的条目都来自中文语境：ASR 误识别
+# （next→Legacy、mean→Min）与中文字幕里夹带的英文术语（material 是 UE 材质、
+# rest 是 REST 接口）。它们靠周围的中文消歧，纯英文段落没有这层上下文，
+# 套用会误伤普通词：material→Material、texture→Texture、the rest→the REST。
+# 因此表格条目只作用于含中日韩表意文字的段落；显式 overrides 是针对当前
+# 文件的，任何段落都生效。
+
+_CJK_RE = re.compile(r'[\u4e00-\u9fff\u3400-\u4dbf]')
+
+
+def _has_cjk(text: str) -> bool:
+    return bool(_CJK_RE.search(text))
+
+
 def step_terminology(segments: list[dict], config: dict) -> list[dict]:
-    mapping = load_terminology()
-    mapping.update(config.get("terminology_overrides", {}))
+    table = load_terminology()
+    overrides = config.get("terminology_overrides", {})
+    mapping = dict(table)
+    mapping.update(overrides)
 
     if not mapping:
         return segments
@@ -539,7 +557,11 @@ def step_terminology(segments: list[dict], config: dict) -> list[dict]:
 
     for seg in segments:
         text = seg["text"]
+        cjk = _has_cjk(text)
         for asr_text, correct_text in sorted_terms:
+            # 表格条目只在中文段落生效；显式 overrides 不限语言
+            if not cjk and asr_text not in overrides:
+                continue
             if asr_text.lower() == correct_text.lower():
                 continue
             result = _try_replace(text, asr_text, correct_text, match_mode)
@@ -583,15 +605,25 @@ DOMAIN_CASE_GROUPS_MAP: dict[str, list[str]] = {
 DEFAULT_CASE_GROUPS = ["generic_acronym", "os_term", "file_format"]
 
 
+def _case_pattern(terms: dict[str, str]):
+    if not terms:
+        return None
+    sorted_terms = sorted(terms, key=len, reverse=True)
+    return re.compile(
+        '|'.join(r'\b' + re.escape(t) + r'\b' for t in sorted_terms),
+        re.IGNORECASE | re.ASCII,
+    )
+
+
 def step_capitalization(segments: list[dict], config: dict) -> list[dict]:
     """Apply proper noun capitalization and domain-aware case normalization.
 
     Loads from correction-table.md '大小写校准' section + AI overrides.
+    表格条目只作用于含中文的段落（见上方语言闸门说明），显式 overrides 不限语言。
     """
     cap_map, case_groups = load_capitalization_table()
 
     overrides = config.get("capitalization_overrides", {})
-    cap_map.update(overrides)
 
     domain = config.get("domain")
     group_names = DOMAIN_CASE_GROUPS_MAP.get(domain, DEFAULT_CASE_GROUPS) if domain else DEFAULT_CASE_GROUPS
@@ -606,18 +638,20 @@ def step_capitalization(segments: list[dict], config: dict) -> list[dict]:
         for k, v in group.items():
             if k not in combined:
                 combined[k] = v
+    # Then overrides (highest priority)
+    combined.update(overrides)
 
-    if not combined:
-        return segments
-
-    sorted_terms = sorted(combined, key=len, reverse=True)
-    pattern = re.compile(
-        '|'.join(r'\b' + re.escape(t) + r'\b' for t in sorted_terms),
-        re.IGNORECASE | re.ASCII,
-    )
+    table_pattern = _case_pattern(combined)
+    override_pattern = _case_pattern(overrides)
 
     for seg in segments:
-        seg["text"] = pattern.sub(lambda m: combined[m.group(0).lower()], seg["text"])
+        text = seg["text"]
+        if _has_cjk(text):
+            if table_pattern:
+                text = table_pattern.sub(lambda m: combined[m.group(0).lower()], text)
+        elif override_pattern:
+            text = override_pattern.sub(lambda m: overrides[m.group(0).lower()], text)
+        seg["text"] = text
 
     return segments
 

@@ -525,6 +525,7 @@ See `references/example.md` for a complete worked example (input → processing 
 | 对同一段字幕重复应用增强步骤 | 重复处理可能导致过度修正（如二次去标点破坏保护区域） | 严格按 Enhancement Order 顺序执行一次 |
 | 输出前不做完整性校验 | 增强过程可能意外删除内容或破坏时间轴 | 必须执行 Quality Checks 中的全部校验项 |
 | 静默跳过联网校准而不通知用户 | 用户期待所有修正有据可查，跳过不通知会降低信任 | 跳过时在 diff 中标注「⚠️联网校准跳过」 |
+| 把 correction-table.md / 大小写校准的条目套用到纯英文段落 | 表内条目来自中文语境，靠周围中文消歧（material 是 UE 材质、rest 是 REST 接口），纯英文段落套用会误伤普通词（the rest→the REST、texture→Texture） | 表格条目只作用于含中文的段落；纯英文段落只用 `terminology_overrides` / `capitalization_overrides`。enhance.py 已内置该语言闸门，不要绕过 |
 
 ## Failure Handling
 
