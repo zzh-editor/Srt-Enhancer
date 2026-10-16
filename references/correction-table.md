@@ -288,8 +288,9 @@
 | triple / tripa | Tripo | 缩写 |
 | ProForce / profiles | Perforce | 版本控制系统 |
 | Cloud | Claude | Anthropic AI 模型 |
-| TabDown / TypeNode / type now / typenow | TypeNow | AI 生图工具 |
-| TapNow / type now / typenow | TapNow | AI 生图工具（与 TypeNow 关联） |
+| TabDown | TapNow | AI 生图工具；用户确认品牌写法 |
+| type now | TapNow | AI 生图工具；用户确认品牌写法 |
+| typenow | TapNow | AI 生图工具；用户确认品牌写法 |
 | 麦克斯 / 麦壳思 | MAXs | 课程配套插件名称 |
 | messy / meshy | Meshy | AI 3D 模型生成平台 |
 | luma / lumen / luminous | Luma AI | AI 3D/视频生成平台 |
@@ -821,6 +822,12 @@
 | legacy | Legacy | ai_3d | Legacy model |
 | native | Native | ai_3d | Native model |
 | point | Point | ai_3d | Point cloud |
+| blockout | Blockout | brand_tool | UE Level Blockout 白盒 |
+| foliage | Foliage | brand_tool | UE Foliage 植被工具 |
+| landscape | Landscape | brand_tool | UE 地形系统 |
+| material | Material | brand_tool | UE 材质 |
+| texture | Texture | brand_tool | 纹理资产 |
+| contrast | Contrast | brand_tool | Post Process 对比度属性 |
 
 ---
 
@@ -1156,3 +1163,64 @@
 | 可以跟我讨论一下 | 也可以跟我讨论一下 | 精校对照 |
 | 以维护是最重要的 | 易维护 是最重要的 | 精校对照（断句同步为「…简单 易维护」|「是最重要的」） |
 | trip licitmask | trapezius | 精校对照（「再解析成这 trapezius」ASR 严重变形） |
+
+| 由他 | 犹他 | 用户确认修正（Utah/UTAH EAE） |
+| 南卫理工会 | 南卫理公会 | 用户确认修正（SMU 标准译名） |
+| 多报脸学校 | 多报两所学校 | 用户确认修正 |
+| Concen tration | Concentration | 用户确认修正（英文断词） |
+| Digital Art | Digital Arts | 用户确认修正（Dartmouth CS/DA 官方名） |
+
+| block out | Blockout | 用户确认修正（Epic 官方文档，UE Level Blockout 白盒） |
+
+## 用户确认修正（week9 Substance 3D）
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| nano bananapro | Nano Banana Pro | Google 图像生成模型；官方名称核对，用户确认 |
+| Tecture | Texture | Substance 贴图语境；用户确认 |
+| substance printer | Substance 3D Painter | Adobe 贴图软件；用户确认 |
+| colle ction | collection | 英文断词；用户确认 |
+| ao | AO | Ambient Occlusion 贴图缩写；用户确认 |
+| chat gpt | ChatGPT | 产品名称；用户确认 |
+
+## 用户确认修正（Maya 骨骼绑定课 · 切片）
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| constrain的一个node | constraint的一个node | 约束节点；用户确认修正 |
+| constraintl | constraint | ASR 拼写错误；用户确认修正 |
+| joint chian | joint chain | 关节链 ASR 拼写；用户确认修正 |
+| 这三骨 | 这三节骨 | 胳膊骨骼段漏字；用户确认修正 |
+| Parent Constrain | Parent Constraint ⚠️仅上下文判断 | 与已正确的 "Parent Constraint" 子串自匹配会产出 Constraintt，不进自动表，交由 AI 层按语境处理 |
+
+## 用户确认修正（week9P5 Maya/Substance 流程）
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| 差GPT | ChatGPT | ASR 误识别；用户确认修正 |
+| D模 | 低模 | 高模/低模语境；用户确认修正 |
+| T图 | 贴图 | 贴图 ASR 简写；用户确认修正 |
+| explore texture | export Texture | Substance/Maya 导出操作；用户确认修正 |
+| SubsetPinter | Substance 3D Painter | ASR 拼写变形；用户确认修正 |
+| mumset | Marmoset | Marmoset Toolbag；用户确认修正 |
+| Mamaset | Marmoset | Marmoset Toolbag；用户确认修正 |
+| streams uv | Straighten UV | Maya UV 拉直命令；用户确认修正 |
+| tacture | Texture | 贴图；用户确认修正 |
+| 鼠牙右键 | 鼠标右键 | 鼠标操作；用户确认修正 |
+| 数白右键 | 鼠标右键 | 鼠标操作；用户确认修正 |
+| 的键数白右键 | 键 鼠标右键 | 修饰键+鼠标右键操作；用户确认修正 |
+| 电脑给导出 | 模型给导出 | 模型导出语境；用户确认修正 |
+| 把NormalAO | 把 Normal 和 AO | 贴图通道列举；用户确认修正 |
+| back一下 | Bake 一下 | baking 操作，区别于文件夹名 back；用户确认修正 |
+
+## 用户确认修正（candy 环境美术英文教程）
+
+| ASR 误识别 | 正确术语 | 说明 |
+|-----------|---------|------|
+| turn sheet / turnsheet | trim sheet | 环境美术贴图条术语（trim sheet/trim texture）；用户确认修正 |
+| terrible texture | tileable texture | 可平铺贴图；用户确认修正 |
+| shirred material | shared material | 共用材质；用户确认修正 |
+| surface valuation | surface variation | 表面变化；用户确认修正 |
+| added valuation | added variation | 增加的变化；用户确认修正 |
+| acceptance designer | Substance Designer | ASR 变形；用户确认修正 |
+| DXX | DirectX | 法线贴图 OpenGL/DirectX 约定；用户确认修正 |
