@@ -600,3 +600,8 @@ Each workflow step has an explicit failure branch. Follow this table when any st
 ```
 
 各步骤详细规则见 Core Workflow 章节。Focus on semantic understanding and conservative corrections — clean up spoken-language artifacts while preserving original meaning and structure.
+
+### 低 Token 增量补丁模式与词级竖屏拆句说明
+
+- **vertical.py --words（词级单行竖屏拆句）**：利用词级时间戳实现单行竖屏字幕精准拆分与重新对齐。
+- **--export-uncertain / --apply-patch（低 Token 增量补丁模式）**：通过 --export-uncertain 仅导出低置信度/不确定的字幕片段进行 LLM 复核，并通过 --apply-patch 增量回填修正，大幅降低 Token 消耗。
