@@ -223,6 +223,22 @@ def split_segment(seg: dict, chunks: list[str], min_ms: int = DEFAULT_MIN_MS
     return out or [dict(seg)]
 
 
+def invalid_split_keys(splits: dict) -> list[str]:
+    """Return keys whose value is not a list of text chunks.
+
+    video-transcribe 的 splits.json 是 {idx: {safe_cuts: [...], selected_cuts: [...]}}，
+    直接喂给 --splits 会被当成多个分块，静默切出乱码；这里提前拒绝。
+    下划线开头的元数据键（_merge_candidates 等）跳过。
+    """
+    if not isinstance(splits, dict):
+        return ["<root>"]
+    return [
+        str(key) for key, value in splits.items()
+        if not str(key).startswith("_")
+        and not (isinstance(value, list) and all(isinstance(chunk, str) for chunk in value))
+    ]
+
+
 def apply_splits(segments: list[dict], splits: dict, max_chars: int,
                  min_ms: int) -> list[dict]:
     out: list[dict] = []
@@ -262,16 +278,16 @@ def main():
     parser.add_argument("input", help="input SRT file (enhanced)")
     parser.add_argument("--splits", default=None,
                         help="JSON file of semantic split plan {idx: [chunk,...]}")
-    parser.add_argument(""--words", --words-json", default=None,
+    parser.add_argument("--words-json", default=None,
                         help="<output>.words.json from video-transcribe for word-aligned timing")
     parser.add_argument("-o", "--output", default=None,
                         help="output SRT path")
-    parser.add_argument"--max-len", ("--max-chars", type=int, default=DEFAULT_MAX_CHARS,
+    parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS,
                         help="target max chars per vertical line (default 12)")
     parser.add_argument("--min-ms", type=int, default=DEFAULT_MIN_MS,
-           parser.add_argument("--export-uncertain", default=None, help="export low-confidence/overlong lines as timestamp-less compact JSON for LLM token saving")
-    parser.add_argument("--apply-patch", default=None, help="apply incremental patch dictionary returned by LLM")
                         help="minimum per-chunk duration in ms (default 300)")
+    parser.add_argument("--export-uncertain", default=None, help="export low-confidence/overlong lines as timestamp-less compact JSON for LLM token saving")
+    parser.add_argument("--apply-patch", default=None, help="apply incremental patch dictionary returned by LLM")
 
     args = parser.parse_args()
 
@@ -280,21 +296,21 @@ def main():
         print(f"error: no valid segments in {args.input}", file=sys.stderr)
         sys.exit(1)
 
-    if args    if getattr(args, "apply_patch", None):
+    if getattr(args, "apply_patch", None):
         with open(args.apply_patch, "r", encoding="utf-8") as f:
             patch_data = json.load(f)
             patch_dict = patch_data if isinstance(patch_data, dict) else {str(item.get("id", "")): item.get("text", "") for item in patch_data}
             for seg in segments:
-                sid = str(seg.get("index", ""))
+                sid = str(seg.get("idx", ""))
                 if sid in patch_dict:
                     seg["text"] = patch_dict[sid]
 
     if getattr(args, "export_uncertain", None):
-        uncertain = [{"id": seg.get("index"), "text": seg.get("text")} for seg in segments if len(seg.get("text", "")) > args.max_chars or seg.get("confidence", 1.0) < 0.8]
+        uncertain = [{"id": seg.get("idx"), "text": seg.get("text")} for seg in segments if len(seg.get("text", "")) > args.max_chars or seg.get("confidence", 1.0) < 0.8]
         epath = args.export_uncertain if isinstance(args.export_uncertain, str) and args.export_uncertain.endswith(".json") else "uncertain_lines.json"
         with open(epath, "w", encoding="utf-8") as f:
             json.dump(uncertain, f, ensure_ascii=False, indent=2)
-          .words_json:
+    if args.words_json:
         with open(args.words_json, "r", encoding="utf-8") as f:
             attach_word_timestamps(segments, json.load(f))
 
@@ -302,6 +318,16 @@ def main():
     if args.splits:
         with open(args.splits, "r", encoding="utf-8") as f:
             splits = json.load(f)
+        bad = invalid_split_keys(splits)
+        if bad:
+            print(
+                f"error: --splits 需要 {{idx: [分块文本, ...]}}，"
+                f"{args.splits} 里 {', '.join(bad[:5])} 的值不是字符串数组。"
+                "若是 video-transcribe 的 splits.json，先跑 "
+                "semantic_review.py --apply 写回 SRT，再对该 SRT 切竖屏。",
+                file=sys.stderr,
+            )
+            sys.exit(2)
 
     out = apply_splits(segments, splits, args.max_chars, args.min_ms)
 
