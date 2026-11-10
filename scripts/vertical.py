@@ -262,13 +262,15 @@ def main():
     parser.add_argument("input", help="input SRT file (enhanced)")
     parser.add_argument("--splits", default=None,
                         help="JSON file of semantic split plan {idx: [chunk,...]}")
-    parser.add_argument("--words-json", default=None,
+    parser.add_argument(""--words", --words-json", default=None,
                         help="<output>.words.json from video-transcribe for word-aligned timing")
     parser.add_argument("-o", "--output", default=None,
                         help="output SRT path")
-    parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS,
+    parser.add_argument"--max-len", ("--max-chars", type=int, default=DEFAULT_MAX_CHARS,
                         help="target max chars per vertical line (default 12)")
     parser.add_argument("--min-ms", type=int, default=DEFAULT_MIN_MS,
+           parser.add_argument("--export-uncertain", default=None, help="export low-confidence/overlong lines as timestamp-less compact JSON for LLM token saving")
+    parser.add_argument("--apply-patch", default=None, help="apply incremental patch dictionary returned by LLM")
                         help="minimum per-chunk duration in ms (default 300)")
 
     args = parser.parse_args()
@@ -278,7 +280,21 @@ def main():
         print(f"error: no valid segments in {args.input}", file=sys.stderr)
         sys.exit(1)
 
-    if args.words_json:
+    if args    if getattr(args, "apply_patch", None):
+        with open(args.apply_patch, "r", encoding="utf-8") as f:
+            patch_data = json.load(f)
+            patch_dict = patch_data if isinstance(patch_data, dict) else {str(item.get("id", "")): item.get("text", "") for item in patch_data}
+            for seg in segments:
+                sid = str(seg.get("index", ""))
+                if sid in patch_dict:
+                    seg["text"] = patch_dict[sid]
+
+    if getattr(args, "export_uncertain", None):
+        uncertain = [{"id": seg.get("index"), "text": seg.get("text")} for seg in segments if len(seg.get("text", "")) > args.max_chars or seg.get("confidence", 1.0) < 0.8]
+        epath = args.export_uncertain if isinstance(args.export_uncertain, str) and args.export_uncertain.endswith(".json") else "uncertain_lines.json"
+        with open(epath, "w", encoding="utf-8") as f:
+            json.dump(uncertain, f, ensure_ascii=False, indent=2)
+          .words_json:
         with open(args.words_json, "r", encoding="utf-8") as f:
             attach_word_timestamps(segments, json.load(f))
 
