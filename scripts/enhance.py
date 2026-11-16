@@ -22,6 +22,7 @@ Steps (applied in order, all optional):
 """
 
 import argparse
+import base64
 import collections
 import importlib.util
 import json
@@ -193,6 +194,26 @@ def load_terminology(path: Path = TERMINOLOGY_PATH) -> dict[str, str]:
                     mapping[a] = rhs[i] if i < len(rhs) else rhs[-1]
 
     return mapping
+
+
+def load_contextual_terminology(path: Path = TERMINOLOGY_PATH) -> dict[str, list[dict]]:
+    """Load context-only alternatives for candidate lookup; never auto-apply them."""
+    entries: dict[str, list[dict]] = collections.defaultdict(list)
+    if not path.exists():
+        return {}
+
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            cells = _split_markdown_row(line)
+            if cells is None or len(cells) < 2 or "仅上下文判断" not in cells[1]:
+                continue
+            correct = re.sub(r"\s*⚠️?仅上下文判断", "", cells[1]).strip()
+            note = cells[2].strip() if len(cells) > 2 else ""
+            for asr in (part.strip() for part in cells[0].split(" / ")):
+                if asr and correct:
+                    entries[asr].append({"correct": correct, "note": note})
+
+    return dict(entries)
 
 
 # ── ASR stutter fix ────────────────────────────────────────────────
@@ -523,6 +544,53 @@ def _try_replace(text: str, asr_text: str, correct_text: str,
             return flexible.sub(correct_text, text)
 
     return None
+
+
+def _normalize_term(text: str) -> str:
+    return re.sub(r'[\s\-_.,;:/]', '', text).lower()
+
+
+def lookup_terms(
+    terms: list[str], mapping: dict[str, str], match_mode: str = "auto",
+    contextual_terms: dict[str, list[dict]] | None = None,
+) -> list[dict]:
+    """Report only matches for requested terms, using the pipeline matcher."""
+    sorted_terms = sorted(mapping.items(), key=lambda item: -len(item[0]))
+    known_correct = {_normalize_term(correct) for correct in mapping.values()}
+    results = []
+
+    for term in terms:
+        resolved = term
+        matches = []
+        for asr_text, correct_text in sorted_terms:
+            replaced = _try_replace(resolved, asr_text, correct_text, match_mode)
+            if replaced is not None and replaced != resolved:
+                matches.append({"asr": asr_text, "correct": correct_text})
+                resolved = replaced
+
+        if matches:
+            status = "asr_match"
+        elif _normalize_term(term) in known_correct:
+            status = "known_correct"
+        else:
+            status = "unmatched"
+
+        result = {
+            "term": term,
+            "status": status,
+            "matches": matches,
+            "resolved": resolved,
+        }
+        contextual_matches = []
+        for asr_text, alternatives in (contextual_terms or {}).items():
+            for alternative in alternatives:
+                if _try_replace(term, asr_text, alternative["correct"], match_mode) is not None:
+                    contextual_matches.append({"asr": asr_text, **alternative})
+        if contextual_matches:
+            result["contextual_matches"] = contextual_matches
+        results.append(result)
+
+    return results
 
 
 # ── Step: terminology replacement ──────────────────────────────────
@@ -886,7 +954,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Deterministic SRT enhancement pipeline"
     )
-    parser.add_argument("input", help="input SRT file")
+    parser.add_argument("input", nargs="?", help="input SRT file")
+    parser.add_argument("--lookup-terms-json", default=None,
+                        help="look up candidate terms against correction-table.md and print JSON")
+    parser.add_argument("--lookup-terms-base64", default=None,
+                        help="base64-encoded UTF-8 JSON array for Windows-safe term lookup")
     parser.add_argument("-o", "--output", default=None, help="output SRT path")
     parser.add_argument("--match-mode", default="auto",
                         help="term match mode: exact / auto / normalized")
@@ -908,6 +980,32 @@ def main():
                         help="scan output for inconsistent English term casing")
 
     args = parser.parse_args()
+
+    if args.lookup_terms_json is not None and args.lookup_terms_base64 is not None:
+        parser.error("use only one of --lookup-terms-json or --lookup-terms-base64")
+
+    if args.lookup_terms_json is not None or args.lookup_terms_base64 is not None:
+        try:
+            if args.lookup_terms_base64 is not None:
+                terms_json = base64.b64decode(
+                    args.lookup_terms_base64, validate=True
+                ).decode("utf-8")
+            else:
+                terms_json = args.lookup_terms_json
+            terms = json.loads(terms_json)
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            parser.error(f"term lookup input must be valid JSON: {exc}")
+        if not isinstance(terms, list) or any(not isinstance(term, str) for term in terms):
+            parser.error("term lookup input must be a JSON array of strings")
+        print(json.dumps(
+            lookup_terms(terms, load_terminology(), args.match_mode,
+                         load_contextual_terminology()),
+            ensure_ascii=False,
+        ))
+        return
+
+    if not args.input:
+        parser.error("input SRT is required unless a term lookup option is used")
 
     # Build config from defaults + JSON file + CLI overrides
     config = dict(DEFAULT_CONFIG)

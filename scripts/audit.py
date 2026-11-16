@@ -159,8 +159,8 @@ def main():
         if len(all_hits) > args.max:
             print(f"  … 剩余 {len(all_hits) - args.max} 项，用 --max 查看更多")
 
-    sys.exit(1 if errors or dot else 0)
+    return 1 if errors or dot_error else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

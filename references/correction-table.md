@@ -12,6 +12,7 @@
 
 | ASR 误识别 | 正确术语 | 说明 |
 |-----------|---------|------|
+| make | Maya | 发音相似；仅在中文语境中匹配 |
 | mayor | Maya | 发音相似 |
 | maya | Maya | 大小写修正 |
 
@@ -291,6 +292,7 @@
 | TabDown | TapNow | AI 生图工具；用户确认品牌写法 |
 | type now | TapNow | AI 生图工具；用户确认品牌写法 |
 | typenow | TapNow | AI 生图工具；用户确认品牌写法 |
+| TabDown / TypeNode / type now / typenow | TypeNow ⚠️仅上下文判断 | 另一 AI 生图工具名候选；与 TapNow 冲突，按字幕语境区分，不自动替换 |
 | 麦克斯 / 麦壳思 | MAXs | 课程配套插件名称 |
 | messy / meshy | Meshy | AI 3D 模型生成平台 |
 | luma / lumen / luminous | Luma AI | AI 3D/视频生成平台 |
@@ -1057,7 +1059,7 @@
 | t-noise | T_Noise | 贴图命名；用户确认修正 |
 | 接点图 | 节点图 | 材质节点图；用户确认修正 |
 | entcomponent mask / maskcompon | ComponentMask | UE 官方节点；用户确认修正 |
-| Cloud | Cloud | 注意：Cloud Shadow/Cloud Color 等 Unreal 术语不可误改为 Claude；用户确认修正 |
+| Cloud | Cloud ⚠️仅上下文判断 | Cloud Shadow/Cloud Color 等 Unreal 术语不可误改为 Claude；用户确认修正 |
 | 人事 | 人生 | ASR 误识别；用户确认修正 |
 | Cloud Code | Claude Code | ASR 误识别；用户确认修正 |
 | 马海 | Maya | 发音相似；用户确认修正 |

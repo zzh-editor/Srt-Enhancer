@@ -25,6 +25,18 @@ class TestMillisecondSerialization(unittest.TestCase):
 
 
 class TestWordAlignedVerticalSplit(unittest.TestCase):
+    def test_short_cue_splits_every_chunk_without_dropping_text(self):
+        seg = {"idx": 1, "start": 0.0, "end": 0.1, "text": "甲乙丙丁"}
+        out = split_segment(seg, ["甲", "乙", "丙", "丁"])
+
+        self.assertEqual([item["text"] for item in out], ["甲", "乙", "丙", "丁"])
+        self.assertEqual((out[0]["start"], out[-1]["end"]), (0.0, 0.1))
+        self.assertTrue(all(item["start"] < item["end"] for item in out))
+
+    def test_nonmatching_chunks_fall_back_to_original(self):
+        seg = {"idx": 1, "start": 0.0, "end": 1.0, "text": "原字幕"}
+        self.assertEqual(split_segment(seg, ["其他文本"]), [seg])
+
     def test_attaches_matching_words_and_uses_word_boundaries(self):
         segments = [{"idx": 1, "start": 0.0, "end": 1.0, "text": "今天我们"}]
         words = [{"start": 0.0, "end": 1.0, "words": [

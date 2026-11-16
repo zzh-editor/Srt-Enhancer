@@ -1,5 +1,23 @@
 # SRT Enhancement Example
 
+## Minimal Example
+
+**Input:**
+```srt
+1
+00:00:00,100 --> 00:00:05,000
+嗯今天我们要看一下Python3.9的新功能啊
+```
+
+**Processing:**
+1. Detect `zh` and Python domain; resolve only candidate terminology from the local table lookup.
+2. Run `enhance.py --lang zh --domain python --steps normalize,terminology,spacing,capitalization,terminology,finalize`.
+3. Review title marking and the diff; wait for user approval before writing.
+
+**Output:** `input_Enhancer.srt`; removes fillers, fixes 的/得/地 and ratios, normalizes Python terms, spacing and casing, applies the second terminology pass, then punctuation and hotkey normalization.
+
+See the full worked example below for a multi-cue input, diff table and output.
+
 **Input SRT**:
 ```
 1

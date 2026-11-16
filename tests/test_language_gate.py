@@ -64,6 +64,16 @@ class TestTableLanguageGate(unittest.TestCase):
         self.assertTrue(_has_cjk("中英 mixed"))
         self.assertFalse(_has_cjk("English only 123"))
 
+    def test_word_boundaries_prevent_english_substring_replacements(self):
+        for text, source, target in [
+            ("whatever", "eve", "EV"),
+            ("jointt4", "join", "joint"),
+            ("psphere1", "ps", "Photoshop"),
+        ]:
+            self.assertIsNone(enhance._try_replace(text, source, target))
+
+        self.assertEqual(enhance._try_replace("the eve", "eve", "EV"), "the EV")
+
 
 if __name__ == "__main__":
     unittest.main()
