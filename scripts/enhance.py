@@ -778,10 +778,11 @@ def step_depunct(segments: list[dict], config: dict) -> list[dict]:
                 placeholder = f"\x00PROTECT_CODE_{i}\x00"
                 text = re.sub(r"`[^`]+`", lambda m, ph=placeholder: ph, text)
 
-        # Replace punctuation only when adjacent to CJK characters
-        # (?<![a-zA-Z0-9]) guards protect patterns like A/B, C#, 10.000 between Latin/digits
+        # Replace punctuation only when adjacent to CJK characters.
+        # (?<![0-9]) guards 千分位 like "3,500 个" while still stripping
+        # "OK,我们" — punctuation after a Latin word and before CJK.
         text = re.sub(rf'([{CJK_RANGES}])({PUNCT})', r'\1 ', text)
-        text = re.sub(rf'(?<![a-zA-Z0-9])({PUNCT})([{CJK_RANGES}])', r' \2', text)
+        text = re.sub(rf'(?<![0-9])({PUNCT})([{CJK_RANGES}])', r' \2', text)
         if config.get("dot_preserve", True):
             text = dot_re.sub(" ", text)
         text = re.sub(r'[ \t]+', ' ', text)
