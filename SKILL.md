@@ -32,7 +32,7 @@ For a vertical-only request on an already prepared SRT, skip the normal preferen
 
 ## Non-Negotiable Constraints
 
-- Do not change timestamps, numbering, cue count, SRT structure or meaning; add no source-absent content and remove no meaningful speech.
+- Do not change timestamps, numbering, cue count or SRT structure. 不得凭空增删语义：把上下文能唯一确定的同音/漏字 ASR 误识还原成原词不算增义（如「公寓上面」实为「公网上面」），但这类修改必须标为中等置信度并写进 diff 等用户批准；不得补充原文没有的信息，不得删除有意义的语音。
 - Do not apply low-confidence corrections or write changed output before user approval.
 - Keep diffs in chat. Delete a temporary diff preview after the decision; do not write an intermediate config JSON.
 - Run deterministic transforms once through `enhance.py`; AI must not redo configured steps.
