@@ -31,9 +31,7 @@ Detect the primary language, collect domain, and build the config for `scripts/e
   "domain": "ai-3d",
   "match_mode": "auto",
   "terminology_overrides": {"EK": "1K"},
-  "capitalization_overrides": {"mytool": "MyTool"},
-  "title_candidates": ["艾尔登法环", "霍格沃茨之遗"],
-  "split_avoid": ["的"]
+  "capitalization_overrides": {"mytool": "MyTool"}
 }
 ```
 
@@ -46,6 +44,6 @@ Priority order:
 
 Do not read `correction-table.md` into model context. The script reads it locally for both lookup and the normal enhancement run. Search only candidates returned as `unmatched`, use `"{term}" + "{search_context}"`, inspect the top results, and add only authoritative spellings to `terminology_overrides`.
 
-Scan the full SRT for likely game/media titles while building config. Add confirmed names to `title_candidates`; `review-workflow.md` specifies when title-marker results may be overridden.
+作品名标记由 `title_marker.py` 自己扫描，不写入 config（`title_candidates`、`split_avoid`、`custom_spacing_rule` 都不是 `enhance.py` 的配置键，传进去会被忽略）。
 
-After config is ready, pass it directly to `enhance.py`; do not stop for a separate config confirmation. All proposed text changes are reviewed in the final diff.
+config 不落盘：`--config` 只接受文件路径，而按 `SKILL.md` 约束不得写中间 config。改用 `--lang`、`--domain`、`--overrides`（JSON 字符串）逐项传值。不需要单独的 config 确认环节，所有文字改动在最终 diff 里审。

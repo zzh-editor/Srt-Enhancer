@@ -13,7 +13,6 @@ Failure branches for standalone and caller-mode execution. Caller mode must retu
 | 的/得/地修正后语法不通 | 回退到原始版本，标记 `#uncertain` | 保留原始，在 diff 中标记 ❗ |
 | 术语表查找无匹配 | 回退到 AI 上下文猜测 | 标记为低置信度（50-69%）提交用户确认 |
 | 联网 web search 失败（超时/无结果） | 跳过联网校准，使用本地术语表 | 标记该词为低置信度（50-69%），在 diff 中提示用户自行确认 |
-| spacing 脚本执行失败（`python3`/`python` 均不可用或报错） | 回退到纯 AI 混排处理 | 跳过混排步骤，记录警告 |
 | 标点去除后字幕变空 | 保留原始文本的骨干部分 | 保留原始并标记 `#punctuation_removed_failed` |
 | 游戏书名号标记过泛（误标工具名） | 撤销该条标记 | 保留不做书名号标记 |
 | 单行合并后超过 40 字无法拆分（无语义断点） | 在空格/标点处硬拆分 | 保持现状，标记 `#overflow` |
@@ -24,5 +23,5 @@ Failure branches for standalone and caller-mode execution. Caller mode must retu
 | enhance.py 输出文件无法写入 | 检查目录权限 | Caller mode 返回 `FAILED`；standalone 回退到对话窗口输出内容 |
 | audit.py 出现 ERROR | 查看被标记的词条或点链并回退该修改 | 不写最终输出；保留原 SRT 并说明审计位置 |
 | audit.py 只有 WARN | 将命中行放进 diff 交给用户复核 | 不把单独 WARN 当作脚本失败 |
-| vertical.py 计划缺失或无效 | 询问是否按标点和 `--max-chars 12` 自动切分 | 用户未确认时保留源字幕，不生成竖屏文件 |
+| vertical.py 计划缺失或无效 | `vertical.py` 会按标点 + `--max-chars 12` 自动硬切（可能切出 2 字块）；需要语义断句必须先写 splits 计划 | 用户只要语义断句时，未拿不到计划就不要运行该脚本，保留源字幕 |
 | vertical.py 文本回拼校验失败 | 重做对应条目的语义计划 | 保留原条目；无法修复时不输出不完整竖屏字幕 |

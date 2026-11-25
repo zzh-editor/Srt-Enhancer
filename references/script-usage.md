@@ -9,13 +9,13 @@ python3 scripts/enhance.py "<input_srt>" -o "<scratch_dir>/candidate.srt" \
     --overrides '{"Owatch":"Overwatch","R Center":"Art Center"}'
 
 # Dry-run to inspect steps without modifying:
-python3 scripts/enhance.py input.srt --dry-run
+python3 scripts/enhance.py "<input_srt>" --dry-run
 
-# Skip specific steps:
-python3 scripts/enhance.py input.srt --skip defiller,depunct
+# Skip a merged step (--skip 只认 normalize/terminology/spacing/capitalization/finalize 这 5 个名字):
+python3 scripts/enhance.py "<input_srt>" -o "<scratch_dir>/candidate.srt" --skip terminology
 
-# Run only specific steps:
-python3 scripts/enhance.py input.srt --steps terminology,spacing
+# Run only specific steps (这里的单步名才允许用 defiller/depunct 之类):
+python3 scripts/enhance.py "<input_srt>" -o "<scratch_dir>/candidate.srt" --steps terminology,spacing
 ```
 
 **Pipeline steps executed by enhance.py (in order):**
