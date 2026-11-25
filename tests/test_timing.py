@@ -98,7 +98,7 @@ class TestHotkeyProtection(unittest.TestCase):
 
 class TestVerticalMinDuration(unittest.TestCase):
     def test_chunks_get_min_duration_when_it_fits(self):
-        seg = {"idx": 1, "start": 0.0, "end": 4.0, "text": "一二三 四五六 七八九 十十一"}
+        seg = {"idx": 1, "start": 0.0, "end": 4.0, "text": "一二三四五六七八九十十一"}
         out = split_segment(seg, ["一二三", "四五六", "七八九", "十十一"], min_ms=800)
         self.assertEqual(len(out), 4)
         self.assertTrue(all(b["end"] - b["start"] >= 0.799 for b in out), out)

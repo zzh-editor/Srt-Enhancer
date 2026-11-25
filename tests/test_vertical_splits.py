@@ -41,3 +41,23 @@ class TestHeuristicBalance(unittest.TestCase):
         chunks = _heuristic_split("一二三四五六七八九十十一十二十三", 12)
         self.assertTrue(all(len(c) > 2 for c in chunks), chunks)
         self.assertEqual("".join(chunks), "一二三四五六七八九十十一十二十三")
+
+
+class TestBoundarySpaceAndWidth(unittest.TestCase):
+    def test_cjk_latin_space_survives_split(self):
+        from vertical import split_segment
+        seg = {"idx": 1, "start": 0.0, "end": 2.0,
+               "text": "所以你在 LinkedIn 和官网上看到"}
+        out = split_segment(seg, ["所以你在", "LinkedIn", "和官网上看到"])
+        self.assertEqual("".join(i["text"] for i in out), "所以你在 LinkedIn 和官网上看到")
+
+    def test_overflow_line_warns(self):
+        import contextlib
+        import io
+        from vertical import apply_splits
+        seg = {"idx": 1, "start": 0.0, "end": 4.0, "text": "所以你在 LinkedInX 和官网上看到"}
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            out = apply_splits([seg], {"1": ["所以你在 LinkedInX", "和官网上看到"]}, 12, 800)
+        self.assertEqual(len(out), 2)
+        self.assertIn("warning: cue 1 is 13 chars", err.getvalue())

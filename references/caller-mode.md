@@ -16,7 +16,12 @@ enhancer_preferences:
 
 调用规则：
 
-- 验证输入存在、输出路径不同且其父目录和 `scratch_dir` 存在，所有必要偏好齐全。缺字段时返回 `INVALID_CALL` 和字段名，不要让用户重答问卷。
+- 先逐项核对，缺任一项就返回 `INVALID_CALL` 和缺失字段名，**不要套用默认偏好继续跑**（用户的问卷选择会因此丢失）：
+  1. `input_srt` 存在且能解析；
+  2. `output_srt` 与 `input_srt` 不同，父目录存在；
+  3. `scratch_dir` 存在且可写；
+  4. `enhancer_preferences` 四个字段齐全——`mixed_typesetting`、`terminology_annotation`、`domain_policy`，`domain_policy: override` 时还要 `domain_override`。
+- 不要让用户重答问卷。
 - 只读 `input_srt`，不覆盖它。偏好已由调用方收集，不再弹同一类问题。
 - `domain_policy=auto` 时运行领域检测；仅在结果仍不可靠或有冲突时向用户确认。`override` 时以 `domain_override` 为准。
 - 在 `scratch_dir` 用唯一临时路径生成候选 SRT，在对话中审核其文本 diff。审核前保持 `output_srt` 不存在；用户批准后才将候选写到 `output_srt`，随后清理候选文件。

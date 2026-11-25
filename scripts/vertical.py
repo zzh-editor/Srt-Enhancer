@@ -99,6 +99,28 @@ def write_srt(segments: list[dict], path: str):
 
 # ── Splitting ───────────────────────────────────────────────────────
 
+def _rejoin_boundary_spaces(text: str, chunks: list[str]) -> list[str]:
+    """Keep the whitespace that sat at a split boundary.
+
+    chunks are stripped, so splitting "所以你在 LinkedIn" into
+    ["所以你在", "LinkedIn"] would drop the CJK-Latin space added by the
+    spacing stage. The space is appended to the previous chunk: invisible when
+    rendered, still present in the SRT text.
+    """
+    out: list[str] = []
+    cursor = 0
+    for chunk in chunks:
+        idx = text.find(chunk, cursor)
+        if idx < 0:
+            return chunks
+        gap = text[cursor:idx]
+        if out and gap and not gap.strip():
+            out[-1] = out[-1] + " "
+        out.append(chunk)
+        cursor = idx + len(chunk)
+    return out
+
+
 def _norm(text: str) -> str:
     return "".join(text.split())
 
@@ -153,6 +175,7 @@ def split_segment(seg: dict, chunks: list[str], min_ms: int = DEFAULT_MIN_MS
     # Content fidelity (pre-check): chunks must reproduce the original text
     if _norm(seg["text"]) != _norm("".join(chunks)):
         return [dict(seg)]
+    chunks = _rejoin_boundary_spaces(seg["text"], chunks)
 
     total_dur = seg["end"] - seg["start"]
     if total_dur <= 0:
@@ -264,6 +287,11 @@ def apply_splits(segments: list[dict], splits: dict, max_chars: int,
                                      min_ms))
         else:
             out.append(dict(seg))
+    for item in out:
+        width = _visible_len(item["text"])
+        if width > max_chars:
+            print(f"warning: cue {item['idx']} is {width} chars (max {max_chars}): "
+                  f"{item['text']}", file=sys.stderr)
     return out
 
 
