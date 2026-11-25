@@ -64,6 +64,9 @@ CANONICAL_COMPOUNDS: dict[str, str] = {
 # -- Protection zone patterns --
 PROTECTION_PATTERNS = [
     (re.compile(r'`[^`]+`'), '__CODE__'),
+    # Hotkeys: '+' is 'Sm', so script-spacing would turn ctrl+e into ctrl + e
+    # and the hotkey step could no longer match it.
+    (re.compile(r'(?<![A-Za-z0-9])(?:[Cc]trl|[Cc]md|[Cc]ommand|[Aa]lt|[Oo]pt(?:ion)?|[Ss]hift)(?:\s*\+\s*[A-Za-z0-9]+){1,3}(?![A-Za-z0-9])'), '__HOTKEY__'),
     (re.compile(r'\$[^$]+?\$'), '__MATH__'),
     (re.compile(r'https?://[^\s,;:!?）)"\']+'), '__URL__'),
     (re.compile(r'/[^\s,;:!?）)"\']+(?=[\s,;:!?）)"\']|$)'), '__PATH__'),

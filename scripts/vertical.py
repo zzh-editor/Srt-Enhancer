@@ -30,7 +30,7 @@ from pathlib import Path
 # ── Constants ───────────────────────────────────────────────────────
 
 DEFAULT_MAX_CHARS = 12      # vertical target: 4-12 chars per line
-DEFAULT_MIN_MS = 300        # floor for a chunk so it stays readable
+DEFAULT_MIN_MS = 800        # floor for a chunk so it stays readable (0.3s was unreadable)
 
 
 # ── SRT I/O ─────────────────────────────────────────────────────────
@@ -110,22 +110,33 @@ def _visible_len(text: str) -> int:
 def _heuristic_split(text: str, max_chars: int) -> list[str]:
     """Punctuation-aware length split, used as fallback without a plan."""
     punct = "，。！？、；：,;:.!?… "
+    if len(text) <= max_chars:
+        return [text]
+    # Balanced widths: 14 chars at max 12 becomes 7+7, not 12+2 (the 2-char
+    # tail got a ~166ms sliver and was unreadable).
+    count = -(-len(text) // max_chars)
+    target = -(-len(text) // count)
     chunks: list[str] = []
     rest = text
     while rest:
-        head = rest[:max_chars]
         if len(rest) <= max_chars:
             chunks.append(rest)
             break
         cut = None
-        for i in range(len(head), 0, -1):
+        lo, hi = max(1, target - 2), min(len(rest), target + 2)
+        head = rest[:hi]
+        for i in range(hi, lo - 1, -1):
             if head[i - 1] in punct:
                 cut = i
                 break
         if cut is None:
-            cut = max_chars
-        chunks.append(head[:cut].strip())
+            cut = target
+        chunks.append(rest[:cut].strip())
         rest = rest[cut:].strip()
+    # Fold a 1-2 char orphan into the previous chunk instead of emitting it.
+    if len(chunks) > 1 and len(chunks[-1]) <= 2:
+        chunks[-2] += chunks[-1]
+        chunks.pop()
     return [c for c in chunks if c]
 
 

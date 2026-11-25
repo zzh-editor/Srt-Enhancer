@@ -26,3 +26,18 @@ class TestSplitsSchemaGuard(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestHeuristicBalance(unittest.TestCase):
+    def test_split_is_balanced_not_wide_plus_orphan(self):
+        from vertical import _heuristic_split
+        chunks = _heuristic_split("公司其实都很饱和的不招人了", 12)
+        self.assertTrue(all(len(c) <= 12 for c in chunks), chunks)
+        self.assertTrue(all(len(c) >= 4 for c in chunks), chunks)
+        self.assertEqual("".join(chunks), "公司其实都很饱和的不招人了")
+
+    def test_orphan_tail_is_folded(self):
+        from vertical import _heuristic_split
+        chunks = _heuristic_split("一二三四五六七八九十十一十二十三", 12)
+        self.assertTrue(all(len(c) > 2 for c in chunks), chunks)
+        self.assertEqual("".join(chunks), "一二三四五六七八九十十一十二十三")

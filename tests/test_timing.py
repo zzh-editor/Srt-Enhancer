@@ -82,3 +82,24 @@ class TestConservativeDefiller(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestHotkeyProtection(unittest.TestCase):
+    def test_spacing_keeps_hotkey_glued(self):
+        from apply_spacing import apply_spacing
+        self.assertEqual(apply_spacing("hit ctrl+e to export"), "hit ctrl+e to export")
+        self.assertEqual(apply_spacing("按ctrl+shift+z回退"), "按ctrl+shift+z回退")
+
+    def test_hotkey_step_still_normalizes(self):
+        from enhance import step_hotkeys
+        segs = [{"start": 0.0, "end": 1.0, "text": "hit ctrl+e to export"}]
+        self.assertEqual(step_hotkeys(segs, {})[0]["text"], "hit Ctrl+E to export")
+
+
+class TestVerticalMinDuration(unittest.TestCase):
+    def test_chunks_get_min_duration_when_it_fits(self):
+        seg = {"idx": 1, "start": 0.0, "end": 4.0, "text": "一二三 四五六 七八九 十十一"}
+        out = split_segment(seg, ["一二三", "四五六", "七八九", "十十一"], min_ms=800)
+        self.assertEqual(len(out), 4)
+        self.assertTrue(all(b["end"] - b["start"] >= 0.799 for b in out), out)
+        self.assertEqual("".join(b["text"] for b in out), "一二三四五六七八九十十一")
