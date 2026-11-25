@@ -14,11 +14,9 @@ cat output.srt | grep -v '^[0-9]*$' | grep -v '\-\->' | \
     python3 scripts/title_marker.py
 ```
 
-**AI systematic scan** (并行于 Config 阶段，不增加轮次)：
+**AI systematic scan**：
 
-在 §3 AI 构建 config 时，AI 需扫描输入全文，提取疑似作品名的 token（≥2个中文字或≥2个英文大写词），联网验证后：
-- 将确认的作品名写入 JSON config 的 `title_candidates` 数组
-- `title_marker.py` 执行后，AI 遍历 `title_candidates` 检查是否已加《》，未加则 override
+`title_marker.py` 自己扫描并给命中的作品名加《》，没有 config 键可传（`title_candidates` 不存在，见 `references/config-prep.md`）。AI 不写 config、不预先列清单；只在脚本漏标、且该作品名在输入里多次出现时，于最终 diff 里提出补标，交用户批准。
 
 AI overrides only when **all** conditions met:
 - title_marker.py returned no match for a token

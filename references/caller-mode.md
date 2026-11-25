@@ -8,8 +8,7 @@ input_srt: <绝对路径>
 output_srt: <绝对路径，与 input_srt 不同>
 scratch_dir: <调用方任务临时目录的绝对路径>
 enhancer_preferences:
-  mixed_typesetting: enabled | disabled | custom
-  custom_spacing_rule: <仅 custom 时填写>
+  mixed_typesetting: enabled | disabled   # custom 与 custom_spacing_rule 尚未实现，填了会被忽略
   terminology_annotation: true | false
   domain_policy: auto | override
   domain_override: <仅 override 时填写>
